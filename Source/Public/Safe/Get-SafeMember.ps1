@@ -3,72 +3,55 @@ function Get-SafeMember {
     param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
-        
         [parameter(Mandatory = $False)]
         [Switch]
         $PassThru,
-        
         [Parameter(Mandatory)]
         [Alias('url', 'PCloudURL')]
         [string]
         $PVWAURL,
-        
         [Parameter(Mandatory)]
         [Alias('header')]
         $LogonToken,
-        
         [Parameter(Mandatory, ValueFromPipelineByPropertyName)]
         [Alias('Safe')]
         [string]
         $SafeName,
-        
         [Parameter(Mandatory, ParameterSetName = 'memberName', ValueFromPipelineByPropertyName)]
         [Alias('User')]
         [string]
         $memberName,
-
         [Parameter(ParameterSetName = 'memberName')]
         [switch]
         $useCache,
-
         [Parameter(ParameterSetName = 'Search', ValueFromPipelineByPropertyName)]
         [string]
         $Search,
-
         [Parameter(ParameterSetName = 'Search')]
         [validateSet("User", "Group")]
         [string]
         $memberType,
-
         [Parameter(ParameterSetName = 'Search')]
         [validateSet("True", "False")]
         [string]
         $membershipExpired,
-
         [Parameter(ParameterSetName = 'Search')]
         [validateSet("True", "False")]
         [string]
         $includePredefinedUsers,
-
         [Parameter(ParameterSetName = 'Search')]
         [Nullable[int]]
         $offset = $null,
-        
         [Parameter(ParameterSetName = 'Search')]
         [Nullable[int]]
         $limit,
-
         [Parameter(ParameterSetName = 'Search')]
         [switch]
         $DoNotPage,
-
         [Parameter(ParameterSetName = 'Search')]
         [AllowEmptyString]
         [ValidateSet("asc,desc")]
-        [string]
         $sort
-
-
     )
     Begin {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
@@ -78,16 +61,14 @@ function Get-SafeMember {
             Write-LogMessage -type Error -Msg "No Safe Name provided"
             Return
         }
-
         If (-not [string]::IsNullOrEmpty($memberName)) {
             $SafeMemberURL = "$PVWAURL/API/Safes/{0}/Members/{1}/" -f $SafeName, $memberName
-            Write-LogMessage -type Verbose -MSG "Getting `"memberName`" permissions for safe `"$SafeName`"" 
+            Write-LogMessage -type Verbose -MSG "Getting `"memberName`" permissions for safe `"$SafeName`""
             Return Invoke-Rest -Uri $SafeMemberURL -Method GET -Headers $logonToken -ContentType 'application/json'
         }
         else {
             $SafeMemberURL = "$PVWAURL/API/Safes/{0}/Members/?" -f $SafeName
-            Write-LogMessage -type Verbose -MSG "Getting owners permissions for safe `"$SafeName`"" 
-            
+            Write-LogMessage -type Verbose -MSG "Getting owners permissions for safe `"$SafeName`""
             $filterList = @()
             IF (-not [string]::IsNullOrEmpty($memberType)) {
                 $filterList += "memberType eq $memberType"
@@ -122,11 +103,8 @@ function Get-SafeMember {
             If ($DoNotPage) {
                 Write-LogMessage -type Verbose -MSG "Paging is disabled."
             }
-
             $restResponse = Invoke-Rest -Uri $SafeMemberURL -Method GET -Headers $logonToken -ContentType 'application/json'
-
             [pscustomobject[]]$memberList = $restResponse.value
-
             IF (-not [string]::IsNullOrEmpty($restResponse.NextLink)) {
                 If ($DoNotPage) {
                     Write-LogMessage -type Verbose -MSG "A total of $($memberList.Count) members found, but paging is disabled. Returning only $($memberList.count) mmebers"
@@ -136,7 +114,7 @@ function Get-SafeMember {
                         Write-LogMessage -type Verbose -MSG "NextLink found, getting next page"
                         $restResponse = Invoke-Rest -Uri "$PVWAURL/$($restResponse.NextLink)" -Method GET -Headers $logonToken -ContentType 'application/json'
                         $memberList += $restResponse.value
-                    } 
+                    }
                     until ([string]::IsNullOrEmpty($($restResponse.NextLink)))
                 }
             }

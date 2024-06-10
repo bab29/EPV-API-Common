@@ -1,28 +1,22 @@
-
-# @FUNCTION@ ======================================================================================================================
-# Name...........: Invoke-Rest
-# Description....: Invoke REST Method
-# Parameters.....: Command method, URI, Header, Body
-# Return Values..: REST response
-# =================================================================================================================================
-Function Invoke-Rest {
-    [CmdletBinding()]
-    <#
+<#
 .SYNOPSIS
-	Invoke REST Method
+Invoke REST Method
 .DESCRIPTION
-	Invoke REST Method
+Invoke REST Method
 .PARAMETER Command
-	The REST Command method to run (GET, POST, PATCH, DELETE)
+The REST Command method to run (GET, POST, PATCH, DELETE)
 .PARAMETER URI
-	The URI to use as REST API
+The URI to use as REST API
 .PARAMETER Header
-	The Header as Dictionary object
+The Header as Dictionary object
 .PARAMETER Body
-	(Optional) The REST Body
+The REST Body
 .PARAMETER ErrAction
-	(Optional) The Error Action to perform in case of error. By default "Continue"
+The Error Action to perform in case of error. By default "Continue"
 #>
+Function Invoke-Rest {
+    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', Scope = "Function" , Justification = 'Used in deep debugging')]
+    [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         [Alias('Method')]
@@ -60,7 +54,6 @@ Function Invoke-Rest {
             if ($ErrAction -match ('\bContinue\b|\bInquire\b|\bStop\b|\bSuspend\b')) {
                 IF (![string]::IsNullOrEmpty($(($PSItem.ErrorDetails.Message | ConvertFrom-Json).ErrorCode))) {
                     If (($($PSItem.ErrorDetails.Message | ConvertFrom-Json).ErrorCode -eq 'ITATS127E')) {
-
                         Write-LogMessage -Type Error -Msg 'Was able to connect to the PVWA successfully, but the account was locked'
                         Write-LogMessage -Type Error -Msg "URI:  $URI"
                         Write-LogMessage -Type Verbose -Msg 'Exiting Invoke-Rest'

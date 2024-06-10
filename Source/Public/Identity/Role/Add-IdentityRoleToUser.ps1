@@ -1,3 +1,23 @@
+<#
+.SYNOPSIS
+${1:Short description}
+.DESCRIPTION
+${2:Long description}
+.PARAMETER CatchAll
+${3:Parameter description}
+.PARAMETER roleName
+${4:Parameter description}
+.PARAMETER IdentityURL
+${5:Parameter description}
+.PARAMETER LogonToken
+${6:Parameter description}
+.PARAMETER User
+${7:Parameter description}
+.EXAMPLE
+${8:An example}
+.NOTES
+${9:General notes}
+#>
 function Add-IdentityRoleToUser {
     [CmdletBinding()]
     param (
@@ -31,10 +51,9 @@ function Add-IdentityRoleToUser {
         }
         elseif (2 -le $rolesResult.Count) {
             Write-LogMessage -type Error -MSG 'Multiple roles found, please enter a uqniue role name and try again'
-            Return 
+            Return
         }
         else {
-
             $addUserToRole = [PSCustomObject]@{
                 Users = [PSCustomObject]@{
                     Add = $User

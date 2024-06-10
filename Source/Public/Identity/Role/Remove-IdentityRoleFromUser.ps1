@@ -1,3 +1,25 @@
+    <#
+.Synopsis
+    Short description
+.DESCRIPTION
+    Long description
+.EXAMPLE
+    Example of how to use this cmdlet
+.EXAMPLE
+    Another example of how to use this cmdlet
+.INPUTS
+    Inputs to this cmdlet (if any)
+.OUTPUTS
+    Output from this cmdlet (if any)
+.NOTES
+    General notes
+.COMPONENT
+    The component this cmdlet belongs to
+.ROLE
+    The role this cmdlet belongs to
+.FUNCTIONALITY
+    The functionality that best describes this cmdlet
+#>
 function Remove-IdentityRoleFromUser {
     [CmdletBinding(
         SupportsShouldProcess,
@@ -23,7 +45,6 @@ function Remove-IdentityRoleFromUser {
         [string[]]
         $User
     )
-        
     begin {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
         if ($Force -and -not $Confirm) {
@@ -42,9 +63,8 @@ function Remove-IdentityRoleFromUser {
         }
         elseif (2 -le $rolesResult.Count) {
             Write-LogMessage -type Error -MSG 'Multiple roles found, please enter a uqniue role name and try again'
-            Return 
+            Return
         }
-        
     }
     process {
         if ($PSCmdlet.ShouldProcess($user, "Remove-IdentityRoleFromUser $roleName")) {
@@ -78,7 +98,7 @@ function Remove-IdentityRoleFromUser {
             }
         }
         else {
-            Write-LogMessage -type Warning -MSG "Skipping removal of user $user from role  `"$roleName`" due to confimation being denied" 
+            Write-LogMessage -type Warning -MSG "Skipping removal of user $user from role  `"$roleName`" due to confimation being denied"
         }
     }
 }

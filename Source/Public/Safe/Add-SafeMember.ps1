@@ -39,73 +39,71 @@ function Add-SafeMember {
         $useAccounts,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $retrieveAccounts, 
+        $retrieveAccounts,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $listAccounts, 
+        $listAccounts,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $addAccounts, 
+        $addAccounts,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
         $updateAccountContent,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $updateAccountProperties, 
+        $updateAccountProperties,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $initiateCPMAccountManagementOperations, 
+        $initiateCPMAccountManagementOperations,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
         $specifyNextAccountContent,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $renameAccounts, 
+        $renameAccounts,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $deleteAccounts, 
+        $deleteAccounts,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $unlockAccounts, 
+        $unlockAccounts,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
         $manageSafe,
-        [Parameter(ValueFromPipelineByPropertyName)] 
-        [bool]
-        $manageSafeMembers, 
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $backupSafe, 
+        $manageSafeMembers,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $viewAuditLog, 
+        $backupSafe,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $viewSafeMembers, 
+        $viewAuditLog,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $accessWithoutConfirmation, 
+        $viewSafeMembers,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $createFolders, 
+        $accessWithoutConfirmation,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $deleteFolders, 
+        $createFolders,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $moveAccountsAndFolders, 
+        $deleteFolders,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $requestsAuthorizationLevel1, 
+        $moveAccountsAndFolders,
         [Parameter(ValueFromPipelineByPropertyName)]
         [bool]
-        $requestsAuthorizationLevel2            
-        
+        $requestsAuthorizationLevel1,
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [bool]
+        $requestsAuthorizationLevel2
     )
     Begin {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
         $SafeMemberURL = "$PVWAURL/API/Safes/{0}/Members/" -f $SafeName
-        
     }
     process {
         $permissions = [pscustomobject]@{
@@ -139,8 +137,7 @@ function Add-SafeMember {
             'MemberType'               = $MemberType
             'Permissions'              = $permissions
         }
-        Write-LogMessage -type Verbose -MSG "Adding owner `"memberName`" to safe `"$SafeName`"" 
+        Write-LogMessage -type Verbose -MSG "Adding owner `"memberName`" to safe `"$SafeName`""
         Invoke-Rest -Uri $SafeMemberURL -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($body | ConvertTo-Json -Depth 99)
     }
-
 }

@@ -3,78 +3,62 @@ function Get-Safe {
     param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
-
         [Alias('url', 'PCloudURL')]
         [Parameter(Mandatory)]
         [string]
         $PVWAURL,
-
         [Alias('header')]
         [Parameter(Mandatory)]
         $LogonToken,
-
         [Parameter(ParameterSetName = 'SafeID', ValueFromPipelineByPropertyName, ValueFromPipeline )]
         [Alias('SafeID')]
         [string]
         $SafeUrlId,
-
         [Parameter(ParameterSetName = 'PlatformID')]
         [Parameter(ParameterSetName = 'SafeName', ValueFromPipelineByPropertyName, ValueFromPipeline )]
         [Alias('Safe')]
         [string]
         $SafeName,
-
         [Parameter(ParameterSetName = 'PlatformID')]
         [string]
         $PlatformID,
-        
         [Parameter(ParameterSetName = 'AllSafes')]
         [switch]
         $AllSafes,
-
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeName')]
         [switch]
         $ExtendedDetails,
-
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeID')]
         [Parameter(ParameterSetName = 'SafeName')]
         [switch]
         $includeAccounts,
-
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeName')]
         [Parameter(ParameterSetName = 'SafeID')]
         [switch]
         $useCache,
-
         [Parameter(ParameterSetName = 'SafeName', ValueFromPipelineByPropertyName)]
         [string]
         $Search,
-
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeName')]
         [Nullable[int]]
         $offset = $null,
-        
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeName')]
         [Nullable[int]]
         $limit,
-
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeName')]
         [switch]
         $DoNotPage,
-
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeName')]
         [AllowEmptyString]
         [ValidateSet("asc,desc")]
-        [string]
         $sort
-
     )
     Begin {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
@@ -84,8 +68,8 @@ function Get-Safe {
         $PlatformIDURL = "$BaseURL/Platforms/{0}/Safes/{1}/?"
     }
     process {
-        $SafeUrlIdExists = -not [string]::IsNullOrEmpty($SafeUrlId) 
-        $SafeNameExists = -not [string]::IsNullOrEmpty($SafeName) 
+        $SafeUrlIdExists = -not [string]::IsNullOrEmpty($SafeUrlId)
+        $SafeNameExists = -not [string]::IsNullOrEmpty($SafeName)
         $PlatformIDExists = -not [string]::IsNullOrEmpty($PlatformID)
         IF (-not $($SafeNameExists -or $PlatformIDExists -or $SafeUrlIdExists)) {
             Write-LogMessage -type Verbose -Msg "No Safe Name, Safe ID, or Platform ID provided, returning all safes"
@@ -104,7 +88,6 @@ function Get-Safe {
             $restResponse = Invoke-Rest -Uri $URL -Method GET -Headers $logonToken -ContentType 'application/json'
             Return $restResponse
         }
-
         elseif ($PlatformIDExists) {
             If ($SafeNameExists) {
                 Write-LogMessage -type Verbose -MSG "Searching for a safe with the name of `"$SafeName`" and a platformID of `"$PlatformID`""
@@ -117,10 +100,8 @@ function Get-Safe {
             $restResponse = Invoke-Rest -Uri $URL -Method GET -Headers $logonToken -ContentType 'application/json'
             Return $restResponse
         }
-        
         Write-LogMessage -type Verbose -MSG "Getting list of safes"
-        $URL = $SafeURL 
-
+        $URL = $SafeURL
         IF (-not [string]::IsNullOrEmpty($Search)) {
             $URL = $URL + "&search=$search"
             Write-LogMessage -type Verbose -MSG "Applying a search of `"$search`""
@@ -152,10 +133,7 @@ function Get-Safe {
             $URL = $URL + "&useCache=true"
             Write-LogMessage -type Verbose -MSG "Using session cache for results"
         }
-
-
         $restResponse = Invoke-Rest -Uri $URL -Method GET -Headers $logonToken -ContentType 'application/json'
-
         [pscustomobject[]]$resultList = $restResponse.value
         IF (-not [string]::IsNullOrEmpty($restResponse.NextLink)) {
             If ($DoNotPage) {
@@ -166,7 +144,7 @@ function Get-Safe {
                     Write-LogMessage -type Verbose -MSG "NextLink found, getting next page"
                     $restResponse = Invoke-Rest -Uri "$PVWAURL/$($restResponse.NextLink)" -Method GET -Headers $logonToken -ContentType 'application/json'
                     $resultList += $restResponse.value
-                } 
+                }
                 until ([string]::IsNullOrEmpty($($restResponse.NextLink)))
             }
         }

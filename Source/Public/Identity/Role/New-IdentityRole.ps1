@@ -1,3 +1,25 @@
+    <#
+.Synopsis
+    Short description
+.DESCRIPTION
+    Long description
+.EXAMPLE
+    Example of how to use this cmdlet
+.EXAMPLE
+    Another example of how to use this cmdlet
+.INPUTS
+    Inputs to this cmdlet (if any)
+.OUTPUTS
+    Output from this cmdlet (if any)
+.NOTES
+    General notes
+.COMPONENT
+    The component this cmdlet belongs to
+.ROLE
+    The role this cmdlet belongs to
+.FUNCTIONALITY
+    The functionality that best describes this cmdlet
+#>
 function New-IdentityRole {
     [CmdletBinding()]
     param (
@@ -32,7 +54,6 @@ function New-IdentityRole {
     Begin {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
     }
-
     process {
         Write-LogMessage -type Verbose -MSG "Creatung new Role named `"$RoleName`""
         $body = [PSCustomObject]@{
@@ -51,7 +72,6 @@ function New-IdentityRole {
             Write-LogMessage -type Verbose -MSG "Adding groups `"$Groups`" to new Role named `"$RoleName`""
             $body  | Add-Member -MemberType NoteProperty -Name Users -Value $Groups
         }
-
         $result = Invoke-RestMethod -Uri "$IdentityURL/Roles/StoreRole" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($body | ConvertTo-Json -Depth 99)
         IF (!$result.Success) {
             Write-LogMessage -type Error -MSG  $result.Message
@@ -61,6 +81,5 @@ function New-IdentityRole {
             Write-LogMessage -type info -MSG "New Role named `"$RoleName`" created"
             Return $result.Result._RowKey
         }
-        
     }
 }

@@ -1,4 +1,23 @@
-Function Get-VaultUsers {
+<#
+.SYNOPSIS
+Gets users from vault
+.DESCRIPTION
+Get users from vault
+${2:Long description}
+.PARAMETER PVWAURL
+${4:Parameter description}
+.PARAMETER LogonToken
+${5:Parameter description}
+.PARAMETER componentUser
+${6:Parameter description}
+.PARAMETER ExtendedDetails
+${7:Parameter description}
+.EXAMPLE
+${8:An example}
+.NOTES
+${9:General notes}
+#>
+Function Get-VaultUser {
     Param
     (
         [Parameter(ValueFromRemainingArguments, DontShow)]

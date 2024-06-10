@@ -1,3 +1,23 @@
+<#
+.SYNOPSIS
+${1:Short description}
+.DESCRIPTION
+${2:Long description}
+.PARAMETER CatchAll
+${3:Parameter description}
+.PARAMETER Force
+${4:Parameter description}
+.PARAMETER PVWAURL
+${5:Parameter description}
+.PARAMETER LogonToken
+${6:Parameter description}
+.PARAMETER User
+${7:Parameter description}
+.EXAMPLE
+${8:An example}
+.NOTES
+${9:General notes}
+#>
 function Remove-VaultUser {
     [CmdletBinding(
         SupportsShouldProcess,
@@ -18,7 +38,7 @@ function Remove-VaultUser {
         [Alias('Member')]
         [string]
         $User
-    ) 
+    )
     begin {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
         if ($Force -and -not $Confirm) {
@@ -36,7 +56,7 @@ function Remove-VaultUser {
                 else {
                     Write-LogMessage -type verbose -MSG "Adding username `"$($PSitem.username.Substring(0,28))`" with ID `"$($PSItem.ID)`" to hashtable"
                     $vaultUserHT.Add($PSitem.username.Substring(0, 28), $PSItem.id)
-                } 
+                }
             }
             catch {
                 Write-Error "Error on $item"
@@ -59,14 +79,14 @@ function Remove-VaultUser {
                     $URL_DeleteVaultUser = "$PVWAURL/API/Users/$($ID)/"
                     Invoke-Rest -Command DELETE -Uri $URL_DeleteVaultUser -header $logonToken
                     Write-LogMessage -type Info -MSG "Removed user with the name `"$user`" from the vault succesfully"
-                }        
+                }
                 catch {
                     Write-LogMessage -type Error -MSG 'Error removing Vault Users'
-                    Write-LogMessage -type Error -MSG $PSItem 
+                    Write-LogMessage -type Error -MSG $PSItem
                 }
             }
             else {
-                Write-LogMessage -type Warning -MSG "Skipping removal of user `"$user`" due to confimation being denied" 
+                Write-LogMessage -type Warning -MSG "Skipping removal of user `"$user`" due to confimation being denied"
             }
         }
     }

@@ -1,3 +1,25 @@
+    <#
+.Synopsis
+    Short description
+.DESCRIPTION
+    Long description
+.EXAMPLE
+    Example of how to use this cmdlet
+.EXAMPLE
+    Another example of how to use this cmdlet
+.INPUTS
+    Inputs to this cmdlet (if any)
+.OUTPUTS
+    Output from this cmdlet (if any)
+.NOTES
+    General notes
+.COMPONENT
+    The component this cmdlet belongs to
+.ROLE
+    The role this cmdlet belongs to
+.FUNCTIONALITY
+    The functionality that best describes this cmdlet
+#>
 function Get-IdentityRole {
     [CmdletBinding()]
     param (
@@ -26,7 +48,7 @@ function Get-IdentityRole {
         $roles = [PSCustomObject]@{
             '_or' = [PSCustomObject]@{
                 '_ID' = [PSCustomObject]@{
-                    '_like' = $role 
+                    '_like' = $role
                 }
             },
             [PSCustomObject]@{
@@ -38,23 +60,22 @@ function Get-IdentityRole {
                 }
             }
         }
-    
         $rolequery = [PSCustomObject]@{
-            'roles' = "$($roles|ConvertTo-Json -Depth 99 -Compress)" 
+            'roles' = "$($roles|ConvertTo-Json -Depth 99 -Compress)"
             'Args'  = [PSCustomObject]@{
-                'PageNumber' = 1; 
-                'PageSize'   = 100000; 
+                'PageNumber' = 1;
+                'PageSize'   = 100000;
                 'Limit'      = 100000;
                 'SortBy'     = '';
-                'Caching'    = -1 
-            } 
+                'Caching'    = -1
+            }
         }
         Write-LogMessage -type Verbose -MSG "Gathering Directories"
         $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
         If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
             Write-LogMessage -type Verbose -MSG "Located $($dirResult.result.Count) Directories"
             [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.Service -eq 'CDS' }).directoryServiceUuid
-            $rolequery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force 
+            $rolequery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force
         }
         $result = Invoke-RestMethod -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($rolequery | ConvertTo-Json -Depth 99)
         IF (!$result.Success) {
@@ -67,11 +88,11 @@ function Get-IdentityRole {
         }
         Else {
             If ($IDOnly) {
-                Write-LogMessage -type Verbose -MSG "Returning ID of role `"$rolename`"" 
+                Write-LogMessage -type Verbose -MSG "Returning ID of role `"$rolename`""
                 Return $result.Result.roles.Results.Row._ID
             }
             else {
-                Write-LogMessage -type Verbose -MSG "Returning all informatin about role `"$rolename`"" 
+                Write-LogMessage -type Verbose -MSG "Returning all informatin about role `"$rolename`""
                 Return $result.Result.roles.Results.Row
             }
         }

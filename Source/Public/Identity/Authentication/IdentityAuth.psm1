@@ -44,19 +44,14 @@ Function Get-IdentityHeader {
             HelpMessage = "Subdomain of the privileged cloud environment")]
         [string]$PCloudSubdomain
     )
-
     #Platform Identity API
-
     if ($IdentityTenantURL -match "https://") {
         $IdaptiveBasePlatformURL = $IdentityTenantURL
     } Else {
         $IdaptiveBasePlatformURL = "https://$IdentityTenantURL"
     }
-
     $PCloudTenantAPIURL = "https://$PCloudSubdomain.privilegecloud.cyberark.cloud/PasswordVault/"
-
     Write-LogMessage -type "Verbose" -MSG "URL used : $($IdaptiveBasePlatformURL|ConvertTo-Json -Depth 9)"
-
     if ('OAuthCreds' -eq $PSCmdlet.ParameterSetName) {
         $IdentityUserName = $OAuthCreds.UserName
         $identityHeaders = Format-Token(Get-OAuthCreds -OAuthCreds $OAuthCreds)
@@ -64,14 +59,11 @@ Function Get-IdentityHeader {
         Write-LogMessage -type "Info" -MSG "Identity Token Set Successfully"
         return $identityHeaders
     }
-
     #Creating URLs
-
     $IdaptiveBasePlatformSecURL = "$IdaptiveBasePlatformURL/Security"
     $startPlatformAPIAuth = "$IdaptiveBasePlatformSecURL/StartAuthentication"
     $startPlatformAPIAdvancedAuth = "$IdaptiveBasePlatformSecURL/AdvanceAuthentication"
     $LogoffPlatform = "$IdaptiveBasePlatformSecURL/logout"
-
     #Creating the username/password variables
     if ('UPCreds' -eq $PSCmdlet.ParameterSetName) {
         $InUPCreds = $true
@@ -81,12 +73,9 @@ Function Get-IdentityHeader {
     Write-LogMessage -type "Verbose" -MSG "URL body : $($startPlatformAPIBody|ConvertTo-Json -Depth 9)"
     $IdaptiveResponse = Invoke-RestMethod -SessionVariable session -Uri $startPlatformAPIAuth -Method Post -ContentType "application/json" -Body $startPlatformAPIBody -TimeoutSec 30
     Write-LogMessage -type "Verbose" -MSG "IdaptiveResponse : $($IdaptiveResponse|ConvertTo-Json -Depth 9)"
-
     # We can use the following to give info to the customer $IdaptiveResponse.Result.Challenges.mechanisms
-
     $SessionId = $($IdaptiveResponse.Result.SessionId)
     Write-LogMessage -type "Verbose" -MSG "SessionId : $($SessionId |ConvertTo-Json -Depth 9)"
-
     IF (![string]::IsNullOrEmpty($IdaptiveResponse.Result.IdpRedirectUrl)) {
         IF ([string]::IsNullOrEmpty($PCloudSubdomain)) {
             $PCloudSubdomain = Read-Host -Prompt "The Privilege Cloud Subdomain is required when using SAML. Please enter it"
@@ -105,7 +94,6 @@ Function Get-IdentityHeader {
     } else {
         $AnswerToResponse = Invoke-Challenge $IdaptiveResponse
     }
-
     If ($AnswerToResponse.success) {
         #Creating Header
         $identityHeaders = Format-Token($AnswerToResponse.Result.Token)
@@ -117,7 +105,6 @@ Function Get-IdentityHeader {
         Write-LogMessage -type Error -MSG "Error during logon : $($AnswerToResponse.Message)"
     }
 }
-
 Function Invoke-Challenge {
     [CmdletBinding()]
     Param (
@@ -125,7 +112,6 @@ Function Invoke-Challenge {
             Mandatory = $true)]
         [array]$IdaptiveResponse
     )
-
     $j = 1
     ForEach ($challenge in $IdaptiveResponse.Result.Challenges) {
         #reseting variables
@@ -135,7 +121,6 @@ Function Invoke-Challenge {
         $startPlatformAPIAdvancedAuthBody = $null
         $ChallengeCount = 0
         $ChallengeCount = $challenge.mechanisms.count
-
         Write-LogMessage -type "Info" -MSG "Challenge $($j):"
         #Multi mechanisms option response
         If ($ChallengeCount -gt 1) {
@@ -179,7 +164,6 @@ Function Invoke-Challenge {
     }
     Return $AnswerToResponse
 }
-
 #Runs an advanceAuth API. It will wait in the loop if needed
 Function Invoke-AdvancedAuthBody {
     [CmdletBinding()]
@@ -235,7 +219,6 @@ Function Invoke-AdvancedAuthBody {
     }
     $AnswerToResponse
 }
-
 function Get-PCloudExternalVersion {
     [CmdletBinding()]
     param(
@@ -244,7 +227,6 @@ function Get-PCloudExternalVersion {
         [Parameter(Mandatory = $true)]
         $Token
     )
-
     $ExternalVersion = "12.6.0"
     try {
         $Response = Invoke-RestMethod -Method GET -Uri "$PCloudTenantApiUrl/WebServices/PIMServices.svc/Server" -Headers $Token -ContentType 'application/json'
@@ -252,19 +234,15 @@ function Get-PCloudExternalVersion {
     } catch {
         Write-LogMessage -Type Error -MSG $_.ErrorDetails.Message
     }
-
     $ExternalVersion
 }
-
 Function Write-LogMessage {
     <#
     .SYNOPSIS
         Method to log a message on screen and in a log file
-
     .DESCRIPTION
         Logging The input Message to the Screen and the Log File.
         The Message Type is presented in colours on the screen based on the type
-
     .PARAMETER LogFile
         The Log File to write to. By default using the LOG_FILE_PATH
     .PARAMETER MSG
@@ -306,7 +284,6 @@ Function Write-LogMessage {
             "------------------------------------" | Out-File -Append -FilePath $LogFile
             Write-Host "------------------------------------" -ForegroundColor Magenta
         }
-
         $msgToWrite = "[$(Get-Date -Format "yyyy-MM-dd hh:mm:ss")]`t"
         if ($InDebug -or $InVerbose) {
             $writeToFile = $true
@@ -366,7 +343,6 @@ Function Write-LogMessage {
                 }
             }
         }
-
         If ($writeToFile) {
             $msgToWrite | Out-File -Append -FilePath $LogFile
         }
@@ -378,20 +354,15 @@ Function Write-LogMessage {
         Throw $(New-Object System.Exception ("Cannot write message"), $_.Exception)
     }
 }
-
 function Invoke-SAMLLogon {
-
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]
         [Array] $IdaptiveResponse
     )
-
     Begin {
-
         Add-Type -AssemblyName System.Windows.Forms
         Add-Type -AssemblyName System.Web
-
         #Special thanks to Shay Tevet for his assistance on this section
         $source = @"
 using System;
@@ -403,7 +374,6 @@ namespace Cookies
     {
        [DllImport("wininet.dll", CharSet=CharSet.None, ExactSpelling=false, SetLastError=true)]
         public static extern bool InternetGetCookieEx(string url, string cookieName, StringBuilder cookieData, ref int size, int dwFlags, IntPtr lpReserved);
-
 	public static string GetUriCookieContainer(String uri)
         {
             string str;
@@ -427,28 +397,20 @@ namespace Cookies
     }
 }
 "@
-
         $compilerParameters = New-Object System.CodeDom.Compiler.CompilerParameters
         $compilerParameters.CompilerOptions = "/unsafe"
-
         Add-Type -TypeDefinition $source -Language CSharp -CompilerParameters $compilerParameters
-
         $PCloudURL = "https://$PCloudSubdomain.cyberark.cloud"
         $PCloudPortalURL = "$PCloudURL/privilegecloud/"
         $logonURL = "$IdaptiveBasePlatformURL/login?redirectUrl=https%3A%2F%2F$PCloudSubdomain.cyberark.cloud%2Fprivilegecloud&username=$IdentityUserName&iwa=false&iwaSsl=false"
-
     }
-
     Process {
         $DocComp = {
-
             if ($web.Url.AbsoluteUri -like "*/privilegecloud" -and $web.document.Cookie -like "*loggedIn-*") {
                 $Global:Auth = [cookies.getter]::GetUriCookieContainer("$PCloudURL").ToString()
                 $form.Close()
             }
         }
-
-
         # create window for embedded browser
         $form = New-Object Windows.Forms.Form
         $form.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
@@ -457,7 +419,6 @@ namespace Cookies
         $form.showIcon = $false
         $form.TopMost = $false
         $form.Text = "SAML Based Authentication"
-
         $web = New-Object Windows.Forms.WebBrowser
         $web.Size = $form.ClientSize
         $web.Anchor = "Left,Top,Right,Bottom"
@@ -466,12 +427,9 @@ namespace Cookies
         $web.IsWebBrowserContextMenuEnabled = $true
         $web.Add_DocumentCompleted($DocComp)
         $form.Controls.Add($web)
-
         $web.Navigate(("$logonURL"))
-
         # show browser window, waits for window to close
         if ([system.windows.forms.application]::run($form) -ne "OK") {
-
             if ($null -ne $auth) {
                 [PSCustomObject]$Return = @{
                     Success = $true
@@ -485,13 +443,11 @@ namespace Cookies
                 throw "Unable to get auth token"
             }
         }
-
         End {
             $form.Dispose()
         }
     }
 }
-
 function Get-OAuthCreds {
     [CmdletBinding()]
     param (
@@ -501,10 +457,9 @@ function Get-OAuthCreds {
         "grant_type"    = "client_credentials"
         "client_id"     = $($OAuthCreds.GetNetworkCredential().UserName)
         "client_secret" = $($OAuthCreds.GetNetworkCredential().Password)
-    } 
+    }
     Return $($(Invoke-RestMethod "$IdaptiveBasePlatformURL/oauth2/platformtoken/" -Method 'POST' -Body $body).access_token)
 }
-
 function Format-Token {
     [CmdletBinding()]
     param (

@@ -32,13 +32,11 @@ function Remove-SafeMember {
     process {
         $SafeMemberURL = "$PVWAURL/API/Safes/{0}/Members/{1}/" -f $SafeName, $memberName
         if ($PSCmdlet.ShouldProcess($PSItem.SystemName, 'Remove-SafeMember')) {
-            Write-LogMessage -type Verbose -MSG "Removing owner `"memberName`" from safe `"$SafeName`"" 
+            Write-LogMessage -type Verbose -MSG "Removing owner `"memberName`" from safe `"$SafeName`""
             Invoke-Rest -Uri $SafeMemberURL -Method DELETE -Headers $logonToken -ContentType 'application/json'
         }
         else {
-            Write-LogMessage -type Warning -MSG "Skipping removal of owner `"$memberName`" from safe  `"$SafeName`" due to confimation being denied" 
+            Write-LogMessage -type Warning -MSG "Skipping removal of owner `"$memberName`" from safe  `"$SafeName`" due to confimation being denied"
         }
-
     }
-
 }
