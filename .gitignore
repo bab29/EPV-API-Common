@@ -1,6 +1,9 @@
 # ignore the build folder
-Output/
-Local/
-Tests/
-GitVersion.yml
-
+*
+!*/
+!/Source/**
+!/Tests/**
+!README.md
+!.gitignore
+Source/EPV-API-Common.psd1
+Source/build.psd1
