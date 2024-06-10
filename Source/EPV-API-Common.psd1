@@ -3,7 +3,7 @@
 # Generated on: 2024-06-07
 @{
     # Script module or binary module file associated with this manifest.
-    RootModule        = '.\EPV_API_Common.psm1'
+    RootModule        = 'C:\GIT\EPV-API-Common\Output\EPV-API-Common\EPV-API-Common.psm1'
 
     # Version number of this module.
     ModuleVersion     = '1.0.0'
@@ -93,7 +93,7 @@
     # ModuleList = @()
 
     # List of all files packaged with this module
-    # FileList = @()
+    FileList = @(".\EPV-API-Common.psd1",".\EPV-API-Common.psm1")
 
     # HelpInfo URI of this module
     # HelpInfoURI = ''

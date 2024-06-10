@@ -5,9 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "PowerShell Launch CheatSheet File",
+            "type": "PowerShell",
+            "request": "launch",
+            "script": ". C:\\GIT\\EPV-API-Common\\Local\\CheatSheet.ps1",
+            "cwd": "C:\\GIT\\EPV-API-Common\\Output\\EPV-API-Common"
+        },
+        {
             "name": "PowerShell: Interactive Session",
             "type": "PowerShell",
             "request": "launch"
-        }
+        },
     ]
 }

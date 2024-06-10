@@ -21,6 +21,7 @@ function Get-SafeMember {
         [Alias('Safe')]
         [string]
         $SafeName,
+        
         [Parameter(Mandatory, ParameterSetName = 'memberName', ValueFromPipelineByPropertyName)]
         [Alias('User')]
         [string]
