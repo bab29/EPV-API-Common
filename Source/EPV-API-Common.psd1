@@ -93,7 +93,7 @@
     # ModuleList = @()
 
     # List of all files packaged with this module
-    FileList = @(".\EPV-API-Common.psd1",".\EPV-API-Common.psm1")
+    FileList = @()
 
     # HelpInfo URI of this module
     # HelpInfoURI = ''
