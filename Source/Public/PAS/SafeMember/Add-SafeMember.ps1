@@ -1,10 +1,13 @@
 function Add-SafeMember {
-    [CmdletBinding()]
+    [CmdletBinding(
+        SupportsShouldProcess,
+        ConfirmImpact = 'High'
+    )]
     param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
         [Parameter(Mandatory)]
-        [Alias('url','PCloudURL')]
+        [Alias('url', 'PCloudURL')]
         [string]
         $PVWAURL,
         [Parameter(Mandatory)]
@@ -137,7 +140,13 @@ function Add-SafeMember {
             'MemberType'               = $MemberType
             'Permissions'              = $permissions
         }
-        Write-LogMessage -type Verbose -MSG "Adding owner `"memberName`" to safe `"$SafeName`""
-        Invoke-Rest -Uri $SafeMemberURL -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($body | ConvertTo-Json -Depth 99)
+        if ($PSCmdlet.ShouldProcess($RoleName, 'Add-SafeMember')) {
+            Write-LogMessage -type Verbose -MSG "Adding owner `"$memberName`" to safe `"$SafeName`""
+            Invoke-Rest -Uri $SafeMemberURL -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($body | ConvertTo-Json -Depth 99)
+            Write-LogMessage -type Verbose -MSG "Added owner `"$memberName`" to safe `"$SafeName`" succesfully"
+        }
+        else {
+            Write-LogMessage -type Warning -MSG "Skipping addtion of owner `"$memberName`" to safe `"$SafeName`""
+        }
     }
 }

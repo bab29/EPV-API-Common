@@ -5,16 +5,32 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "PowerShell Launch CheatSheet File",
+            "name": "PowerShell Launch CheatSheet File - Install",
             "type": "PowerShell",
             "request": "launch",
-            "script": ". C:\\GIT\\EPV-API-Common\\Local\\CheatSheet.ps1",
-            "cwd": "C:\\GIT\\EPV-API-Common\\Output\\EPV-API-Common"
+            "script": "C:\\GIT\\EPV-API-Common\\Local\\CheatSheet.ps1",
+            "cwd": "C:\\GIT\\EPV-API-Common",
+            "preLaunchTask": "InstallPackage"
         },
         {
-            "name": "PowerShell: Interactive Session",
+            "name": "PowerShell Launch CheatSheet File - Build",
             "type": "PowerShell",
-            "request": "launch"
+            "request": "launch",
+            "script": "C:\\GIT\\EPV-API-Common\\Local\\CheatSheet.ps1",
+            "cwd": "C:\\GIT\\EPV-API-Common",
+            "preLaunchTask": "BuildModule"
         },
+        {
+            "name": "PowerShell: Interactive Session - Install",
+            "type": "PowerShell",
+            "request": "launch",
+            "preLaunchTask": "InstallPackage"
+        },
+        {
+            "name": "PowerShell: Interactive Session - Build",
+            "type": "PowerShell",
+            "request": "launch",
+            "preLaunchTask": "BuildModule"
+        }
     ]
 }

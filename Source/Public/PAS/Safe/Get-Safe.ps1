@@ -27,11 +27,13 @@ function Get-Safe {
         $AllSafes,
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeName')]
+        [Parameter(ParameterSetName = 'PVWAURL')]
         [switch]
         $ExtendedDetails,
         [Parameter(ParameterSetName = 'AllSafes')]
         [Parameter(ParameterSetName = 'SafeID')]
         [Parameter(ParameterSetName = 'SafeName')]
+        [Parameter(ParameterSetName = 'PVWAURL')]
         [switch]
         $includeAccounts,
         [Parameter(ParameterSetName = 'AllSafes')]
@@ -134,7 +136,7 @@ function Get-Safe {
             Write-LogMessage -type Verbose -MSG "Using session cache for results"
         }
         $restResponse = Invoke-Rest -Uri $URL -Method GET -Headers $logonToken -ContentType 'application/json'
-        [pscustomobject[]]$resultList = $restResponse.value
+        [PSCustomObject[]]$resultList = $restResponse.value
         IF (-not [string]::IsNullOrEmpty($restResponse.NextLink)) {
             If ($DoNotPage) {
                 Write-LogMessage -type Verbose -MSG "A total of $($resultList.Count) results found, but paging is disabled. Returning only $($resultList.count) results"
@@ -151,6 +153,6 @@ function Get-Safe {
         else {
             Write-LogMessage -type Verbose -MSG "Found $($resultList.Count) results"
         }
-        return $resultList
+        return [safe[]]$resultList
     }
 }

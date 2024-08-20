@@ -3,9 +3,6 @@ function Get-SafeMember {
     param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
-        [parameter(Mandatory = $False)]
-        [Switch]
-        $PassThru,
         [Parameter(Mandatory)]
         [Alias('url', 'PCloudURL')]
         [string]
@@ -51,7 +48,9 @@ function Get-SafeMember {
         [Parameter(ParameterSetName = 'Search')]
         [AllowEmptyString]
         [ValidateSet("asc,desc")]
-        $sort
+        $sort,
+        [switch]
+        $permissions
     )
     Begin {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
@@ -121,7 +120,8 @@ function Get-SafeMember {
             else {
                 Write-LogMessage -type Verbose -MSG "Found $($memberList.Count) members"
             }
-            return $memberList
+            $basePerms = @("safeUrlId","safeName","safeNumber","memberId","memberName","memberType","membershipExpirationDate","isExpiredMembershipEnable","isPredefinedUser","isReadOnly")
+            return [safemember[]]$memberList
         }
     }
 }

@@ -1,4 +1,4 @@
-    <#
+<#
 .Synopsis
     Short description
 .DESCRIPTION
@@ -21,7 +21,10 @@
     The functionality that best describes this cmdlet
 #>
 function New-IdentityRole {
-    [CmdletBinding()]
+    [CmdletBinding(
+        SupportsShouldProcess,
+        ConfirmImpact = 'High'
+    )]
     param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
@@ -72,14 +75,20 @@ function New-IdentityRole {
             Write-LogMessage -type Verbose -MSG "Adding groups `"$Groups`" to new Role named `"$RoleName`""
             $body  | Add-Member -MemberType NoteProperty -Name Users -Value $Groups
         }
-        $result = Invoke-RestMethod -Uri "$IdentityURL/Roles/StoreRole" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($body | ConvertTo-Json -Depth 99)
-        IF (!$result.Success) {
-            Write-LogMessage -type Error -MSG  $result.Message
-            Return
+        if ($PSCmdlet.ShouldProcess($RoleName, 'New-IdentityRole')) {
+            Write-LogMessage -type Verbose -MSG "Creating role named `"$RoleName`""
+            $result = Invoke-RestMethod -Uri "$IdentityURL/Roles/StoreRole" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($body | ConvertTo-Json -Depth 99)
+            IF (!$result.Success) {
+                Write-LogMessage -type Error -MSG $result.Message
+                Return
+            }
+            else {
+                Write-LogMessage -type info -MSG "New Role named `"$RoleName`" created"
+                Return $result.Result._RowKey
+            }
         }
         else {
-            Write-LogMessage -type info -MSG "New Role named `"$RoleName`" created"
-            Return $result.Result._RowKey
+            Write-LogMessage -type Warning -MSG "Skipping addtion of safe `"$SafeName`" due to confimation being denied"
         }
     }
 }

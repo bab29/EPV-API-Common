@@ -23,7 +23,7 @@ function Get-CallerPreference {
     The functionality that best describes this cmdlet
 #>
   [CmdletBinding()]
- param (
+  param (
     [Parameter(Mandatory = $true)]
     [ValidateScript({ $_.GetType().FullName -eq 'System.Management.Automation.PSScriptCmdlet' })]
     $Cmdlet,
@@ -32,22 +32,19 @@ function Get-CallerPreference {
     $SessionState
   )
   $vars = @{
-    'ErrorView' = $null
+    'ErrorView'             = $null
     'ErrorActionPreference' = 'ErrorAction'
+    'VerbosePreference'     = 'Verbose'
+    'DebugPreference'       = 'Debug'
   }
-  foreach ($entry in $vars.GetEnumerator())
-  {
-    if ([string]::IsNullOrEmpty($entry.Value) -or -not $Cmdlet.MyInvocation.BoundParameters.ContainsKey($entry.Value))
-    {
+  foreach ($entry in $vars.GetEnumerator()) {
+    if ([string]::IsNullOrEmpty($entry.Value) -or -not $Cmdlet.MyInvocation.BoundParameters.ContainsKey($entry.Value)) {
       $variable = $Cmdlet.SessionState.PSVariable.Get($entry.Key)
-      if ($null -ne $variable)
-      {
-        if ($SessionState -eq $ExecutionContext.SessionState)
-        {
+      if ($null -ne $variable) {
+        if ($SessionState -eq $ExecutionContext.SessionState) {
           Set-Variable -Scope 1 -Name $variable.Name -Value $variable.Value -Force -Confirm:$false -WhatIf:$false
         }
-        else
-        {
+        else {
           $SessionState.PSVariable.Set($variable.Name, $variable.Value)
         }
       }

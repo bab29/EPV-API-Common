@@ -1,86 +1,75 @@
-<#
-.SYNOPSIS
-${1:Short description}
-.DESCRIPTION
-${2:Long description}
-.PARAMETER CatchAll
-${3:Parameter description}
-.PARAMETER roleName
-${4:Parameter description}
-.PARAMETER IdentityURL
-${5:Parameter description}
-.PARAMETER LogonToken
-${6:Parameter description}
-.PARAMETER User
-${7:Parameter description}
-.EXAMPLE
-${8:An example}
-.NOTES
-${9:General notes}
-#>
 function Add-IdentityRoleToUser {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
     param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
         [Alias('role')]
+        [ValidateNotNullOrEmpty()]
         [string]
-        $roleName,
+        $RoleName,
         [Parameter(Mandatory)]
         [Alias('url')]
+        [ValidateNotNullOrEmpty()]
         [string]
         $IdentityURL,
         [Parameter(Mandatory)]
         [Alias('header')]
+        [ValidateNotNullOrEmpty()]
         $LogonToken,
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [Alias('Users','Member')]
+        [Alias('Users', 'Member')]
+        [ValidateNotNullOrEmpty()]
         [string[]]
         $User
     )
     Begin {
-        $PSBoundParameters.Remove("CatchAll")  | Out-Null
+        $PSBoundParameters.Remove("CatchAll") | Out-Null
     }
     process {
-        Write-LogMessage -type Verbose -MSG "Adding `"$user`" to role `"$roleName`""
+        Write-LogMessage -Type Verbose -MSG "Adding `"$User`" to role `"$RoleName`""
         $rolesResult = Get-IdentityRole @PSBoundParameters -IDOnly
-        IF (0 -eq $rolesResult.count) {
-            Write-LogMessage -type Error -MSG "Role `"$roleName`" not found"
-            Return
+
+        if ($rolesResult.Count -eq 0) {
+            Throw "Role `"$RoleName`" not found"
         }
-        elseif (2 -le $rolesResult.Count) {
-            Write-LogMessage -type Error -MSG 'Multiple roles found, please enter a uqniue role name and try again'
-            Return
+        elseif ($rolesResult.Count -ge 2) {
+            Throw "Multiple roles found, please enter a unique role name and try again"
         }
         else {
             $addUserToRole = [PSCustomObject]@{
                 Users = [PSCustomObject]@{
                     Add = $User
                 }
-                Name  = $($rolesResult)
+                Name = $rolesResult
             }
-            Try {
-                $result = Invoke-Rest -Uri "$IdentityURL/Roles/UpdateRole" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body $($addUserToRole | ConvertTo-Json -Depth 99)
-                If ([bool]$result.success) {
-                    If (1 -eq $user.Count) {
-                        Write-LogMessage -type Info -MSG "Role `"$roleName`" added to user `"$user`""
+            try {
+                if ($PSCmdlet.ShouldProcess($User, 'Add-IdentityRoleToUser')) {
+                    Write-LogMessage -Type Verbose -MSG "Adding `"$RoleName`" to user `"$User`""
+                    $result = Invoke-Rest -Uri "$IdentityURL/Roles/UpdateRole" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body $($addUserToRole | ConvertTo-Json -Depth 99)
+                    if ($result.success) {
+                        if ($User.Count -eq 1) {
+                            Write-LogMessage -Type Info -MSG "Role `"$RoleName`" added to user `"$User`""
+                        }
+                        else {
+                            Write-LogMessage -Type Info -MSG "Role `"$RoleName`" added to all users"
+                        }
                     }
-                    Else {
-                        Write-LogMessage -type Info -MSG "Role `"$roleName`" added to all users"
+                    else {
+                        if ($User.Count -eq 1) {
+                            Write-LogMessage -Type Error -MSG "Error adding `"$RoleName`" to user `"$User`": $($response.Message)"
+                        }
+                        else {
+                            Write-LogMessage -Type Error -MSG "Error adding `"$RoleName`" to users: $($response.Message)"
+                        }
                     }
                 }
                 else {
-                    If (1 -eq $user.Count) {
-                        Write-LogMessage -type Error -MSG  "Error adding `"$roleName`" to user `"$user`": $($response.Message)"
-                    }
-                    Else {
-                        Write-LogMessage -type Error -MSG  "Error adding `"$roleName`" to users: $($response.Message)"
-                    }
+                    Write-LogMessage -Type Warning -MSG "Skipping addition of role `"$RoleName`" to user `"$User`" due to confirmation being denied"
                 }
             }
-            Catch {
-                Write-LogMessage -type Error -MSG  "Error while trying to add users to `"$roleName`" : $PSItem "
+            catch {
+                Write-LogMessage -Type Error -MSG "Error while trying to add users to `"$RoleName`": $PSItem"
             }
         }
     }

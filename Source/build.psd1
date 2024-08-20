@@ -7,8 +7,11 @@
 
 @{
     Path = ".\EPV-API-Common.psd1"
-    VersionedOutputDirectory = $false
+    VersionedOutputDirectory = $true
     CopyDirectories = @(
         'en-US'
+        'Classes'
+        'Modules'
+        'Format'
     )
 }

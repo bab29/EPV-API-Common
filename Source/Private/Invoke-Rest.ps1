@@ -15,7 +15,7 @@ The REST Body
 The Error Action to perform in case of error. By default "Continue"
 #>
 Function Invoke-Rest {
-    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', Scope = "Function" , Justification = 'Used in deep debugging')]
+    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Scope = "Function" , Justification = 'Used in deep debugging')]
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]

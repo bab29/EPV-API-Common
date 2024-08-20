@@ -1,8 +1,8 @@
 <#
 .Synopsis
-    Short description
+    Get Identity Directories
 .DESCRIPTION
-    Long description
+    Get Identity Directories
 .EXAMPLE
     Example of how to use this cmdlet
 .EXAMPLE
@@ -48,12 +48,12 @@ function Get-DirectoryService {
         $UuidOnly
     )
     Begin {
-        $PSBoundParameters.Remove("CatchAll")  | Out-Nulls
+        $PSBoundParameters.Remove("CatchAll")  | Out-Null
     }
     Process {
         IF (![string]::IsNullOrEmpty($DirectoryServiceUuid)) {
             Write-LogMessage -type Verbose -MSG "Directory UUID Provided. Setting Search Directory to `"$DirectoryServiceUuid`""
-            [string[]]$DirID = $DirectoryServiceUuid
+            [PSCustomObject[]]$DirID = $DirectoryServiceUuid
         }
         ElseIF (![string]::IsNullOrEmpty($directoryName)) {
             Write-LogMessage -type Verbose -MSG "Directory name provided. Searching for directory with the name of `"$directoryName`""
@@ -61,10 +61,10 @@ function Get-DirectoryService {
             If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories with the name of `"$directoryName`""
                 IF ($UuidOnly) {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
+                    [PSCustomObject[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
                 }
                 else {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
+                    [PSCustomObject[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
                 }
             }
         }
@@ -74,10 +74,10 @@ function Get-DirectoryService {
             If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories with the service type of `"$directoryService`""
                 IF ($UuidOnly) {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
+                    [PSCustomObject[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
                 }
                 else {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
+                    [PSCustomObject[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
                 }
             }
         }
@@ -87,10 +87,10 @@ function Get-DirectoryService {
             If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories"
                 IF ($UuidOnly) {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
+                    [PSCustomObject[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
                 }
                 else {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
+                    [PSCustomObject[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
                 }
             }
         }

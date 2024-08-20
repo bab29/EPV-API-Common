@@ -35,46 +35,92 @@ function Get-IdentityUser {
         $LogonToken,
         [switch]
         $IDOnly,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [Alias('DirID,DirectoryUUID')]
         [String[]]
         $DirectoryServiceUuid,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [string]
         $directoryName,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [string]
         $directoryService,
-        [Parameter(ValueFromPipeline)]
-        [Alias('user', 'username')]
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Alias('user', 'username', 'member', 'UserPrincipalName', 'SamAccountName')]
         [string]$name,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [string]
         $DisplayName,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [alias('email')]
         [string]
         $mail,
-        [Parameter(ValueFromPipeline)]
-        [Alias('ObjectGUID', 'GUID', 'UUID', 'UID', 'ExternalUuid')]
+        [Parameter(ValueFromPipelineByPropertyName, DontShow)]
         [string]
-        $id,
+        $InternalName,
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Alias('ObjectGUID', 'GUID', 'ID', 'UID')]
+        [string]
+        $UUID,
+        [Parameter(ParameterSetName = 'AllUsers')]
         [switch]
-        $AllUsers
+        $AllUsers,
+        [Parameter(ParameterSetName = 'AllUsers')]
+        [switch]
+        $IncludeDetails
     )
     begin {
-        $PSBoundParameters.Remove("CatchAll")  | Out-Null
+        $PSBoundParameters.Remove("CatchAll") |  Out-Null
         [string[]]$DirID = Get-DirectoryService @PSBoundParameters -UuidOnly
+        $count = (Get-Variable -Name users -Scope 1 -ErrorAction SilentlyContinue).value.Count
+        $currentValue = 0
     }
     process {
+        If (0 -ne $count) {
+            $currentValue += 1
+            $percent = $( $currentValue / $count) * 100
+            Write-Progress -Activity "Getting detailed user infomation" -Status "$currentValue out of $count" -PercentComplete $percent
+        }
+        IF ($AllUsers) {
+            Write-LogMessage -type Warning -MSG 'All Users switch passed, getting all users'
+            $result = Invoke-Rest -Uri "$IdentityURL/CDirectoryService/GetUsers" -Method POST -Headers $logonToken -ContentType 'application/json'
+            IF (!$result.Success) {
+                Write-LogMessage -type Error -MSG $result.Message
+                Return
+            }
+            elseif (![string]::IsNullOrEmpty($result.Result.Exceptions.User)) {
+                Write-LogMessage -type Error -MSG $result.Result.Exceptions.User
+                Return
+            }
+            IF (0 -eq $result.Result.Results.Count) {
+                Write-LogMessage -type Warning -MSG 'No user found'
+                Return
+            }
+            Else {
+                If ($IDOnly) {
+                    Write-LogMessage -type Verbose -MSG 'Returning ID of users'
+                    Return $result.Result.Results.Row.UUID
+                }
+                elseIf ($IncludeDetails) {
+                    Write-LogMessage -type Verbose -MSG 'Returning detailed information about users'
+                    [PSCustomObject[]]$users = $result.Result.Results.Row | Select-Object -Property UUID
+                    $ReturnedUsers = $users | Get-IdentityUser -DirectoryServiceUuid $DirID
+                    Return $ReturnedUsers
+                } else {
+                    Write-LogMessage -type Verbose -MSG 'Returning basic information about users'
+                    [PSCustomObject[]]$users = $result.Result.Results.Row
+                    Return $ReturnedUsers
+                }
+            }
+        }
         [PSCustomObject[]]$userSearch = @()
-        IF (![string]::IsNullOrEmpty($id)) {
-            Write-LogMessage -type Verbose -MSG "User ID provided, adding `"$id`" to user search paramters"
-            $userSearch += [PSCustomObject]@{_ID = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $id; ignoreCase = 'true' } } }
+        IF (![string]::IsNullOrEmpty($UUID)) {
+            Write-LogMessage -type Verbose -MSG "User UUID provided, adding `"$UUID`" to user search paramters"
+            $userSearch += [PSCustomObject]@{_ID = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $UUID; ignoreCase = 'true' } } }
         }
         IF (![string]::IsNullOrEmpty($Name)) {
             Write-LogMessage -type Verbose -MSG "User Name provided, adding `"$name`" to user search paramters"
-            $userSearch += [PSCustomObject]@{Name = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $Name; ignoreCase = 'true' } } }
+            $userSearch += [PSCustomObject]@{SystemName = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $Name; ignoreCase = 'true' } } }
         }
         IF (![string]::IsNullOrEmpty($DisplayName)) {
             Write-LogMessage -type Verbose -MSG "User Display Name provided, adding `"$DisplayName`" to user search paramters"
@@ -84,22 +130,16 @@ function Get-IdentityUser {
             Write-LogMessage -type Verbose -MSG "User Email provided, adding `"$mail`" to user search paramters"
             $userSearch += [PSCustomObject]@{Email = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $mail; ignoreCase = 'true' } } }
         }
-        IF ($AllUsers) {
-            Write-LogMessage -type Warning -MSG 'All Users switch passed, getting all users'
+        IF (![string]::IsNullOrEmpty($InternalName)) {
+            Write-LogMessage -type Verbose -MSG "User Internal Name provided, adding `"$InternalName`" to user search paramters"
+            $userSearch += [PSCustomObject]@{InternalName = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $InternalName; ignoreCase = 'true' } } }
         }
         elseif (0 -eq $userSearch.Count) {
             Write-LogMessage -type ErrorThrow -MSG 'No search paramters found'
         }
-        $user = [PSCustomObject]@{'_or' = $userSearch; ObjectType = 'user' }
+        $user = $userSearch
         $userquery = [PSCustomObject]@{
             'user' = "$($user|ConvertTo-Json -Depth 99 -Compress)"
-            'Args' = [PSCustomObject]@{
-                'PageNumber' = 1;
-                'PageSize'   = 100000;
-                'Limit'      = 100000;
-                'SortBy'     = '';
-                'Caching'    = -1
-            }
         }
         $userquery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force
         Try {
@@ -131,5 +171,8 @@ function Get-IdentityUser {
         Catch {
             Write-LogMessage -type Error -MSG "Error Code : $($PSitem.Exception.Message)"
         }
+    }
+    end {
+        Write-Progress -Completed
     }
 }

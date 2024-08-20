@@ -15,13 +15,13 @@
     General notes
 .COMPONENT
     The component this cmdlet belongs to
-.ROLE
-    The role this cmdlet belongs to
+.Group
+    The Group this cmdlet belongs to
 .FUNCTIONALITY
     The functionality that best describes this cmdlet
 #>
-function Get-IdentityRole {
-    [CmdletBinding(DefaultParameterSetName = "RoleName")]
+function Get-IdentityGroup {
+    [CmdletBinding(DefaultParameterSetName = "GroupName")]
     param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
@@ -32,49 +32,49 @@ function Get-IdentityRole {
         [Parameter(Mandatory)]
         [Alias('header')]
         $LogonToken,
-        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = "roleName")]
-        [Alias('role')]
+        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = "GroupName")]
+        [Alias('Group')]
         [string]
-        $roleName,
+        $GroupName,
         [switch]
         $IDOnly,
-        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = "AllRoles")]
+        [Parameter(Mandatory, ValueFromPipeline, ParameterSetName = "AllGroups")]
         [switch]
-        $AllRoles
+        $AllGroups
     )
     Begin {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
     }
     process {
-        if ($AllRoles) {
+        if ($AllGroups) {
 
             [PSCustomObject]$query = @{
-                script = "SELECT Role.Name, Role.ID FROM Role"
+                script = "Select * from DSGroups"
             }
 
             $result = Invoke-RestMethod -Uri "$IdentityURL/Redrock/Query" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($query | ConvertTo-Json -Depth 99)
             Return $result.result.results.Row
         }
 
-        Write-LogMessage -type Verbose -MSG "Attempting to locate Identity Role named `"$roleName`""
-        $role = $roleName
-        $roles = [PSCustomObject]@{
+        Write-LogMessage -type Verbose -MSG "Attempting to locate Identity Group named `"$GroupName`""
+        $Group = $GroupName
+        $Groups = [PSCustomObject]@{
             '_or' = [PSCustomObject]@{
-                '_ID' = [PSCustomObject]@{
-                    '_like' = $role
+                'DisplayName' = [PSCustomObject]@{
+                    '_like' = $Group
                 }
             },
             [PSCustomObject]@{
-                'Name' = [PSCustomObject]@{
+                'SystemName' = [PSCustomObject]@{
                     '_like' = [PSCustomObject]@{
-                        value      = $role
+                        value      = $Group
                         ignoreCase = 'true'
                     }
                 }
             }
         }
-        $rolequery = [PSCustomObject]@{
-            'roles' = "$($roles|ConvertTo-Json -Depth 99 -Compress)"
+        $Groupquery = [PSCustomObject]@{
+            'group' = "$($Groups|ConvertTo-Json -Depth 99 -Compress)"
             'Args'  = [PSCustomObject]@{
                 'PageNumber' = 1;
                 'PageSize'   = 100000;
@@ -87,27 +87,29 @@ function Get-IdentityRole {
         $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
         If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
             Write-LogMessage -type Verbose -MSG "Located $($dirResult.result.Count) Directories"
-            Write-LogMessage   -type Verbose -MSG "Directory results: $($dirResult.result.Results.Row)"
-            [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.Service -eq 'CDS' }).directoryServiceUuid
-            $rolequery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force
+            Write-LogMessage   -type Verbose -MSG "Directory results: $($dirResult.result.Results.Row| ConvertTo-Json -Depth 99)"
+            [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.Service -eq 'ADProxy' }).directoryServiceUuid
+            $Groupquery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force
         }
-        $result = Invoke-RestMethod -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($rolequery | ConvertTo-Json -Depth 99)
+        Write-LogMessage -type Verbose -MSG "Body set to : `"$($Groupquery|ConvertTo-Json -Depth 99)`""
+        $result = Invoke-RestMethod -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($Groupquery | ConvertTo-Json -Depth 99)
+        Write-LogMessage -type Verbose -MSG "Result set to : `"$($result|ConvertTo-Json -Depth 99)`""
         IF (!$result.Success) {
             Write-LogMessage -type Error -MSG $result.Message
             Return
         }
-        IF (0 -eq $result.Result.roles.Results.Count) {
-            Write-LogMessage -type Warning -MSG 'No role found'
+        IF (0 -eq $result.Result.Groups.Results.FullCount) {
+            Write-LogMessage -type Warning -MSG 'No Group found'
             Return
         }
         Else {
             If ($IDOnly) {
-                Write-LogMessage -type Verbose -MSG "Returning ID of role `"$rolename`""
-                Return $result.Result.roles.Results.Row._ID
+                Write-LogMessage -type Verbose -MSG "Returning ID of Group `"$Groupname`""
+                Return $result.Result.Group.Results.row.InternalName
             }
             else {
-                Write-LogMessage -type Verbose -MSG "Returning all informatin about role `"$rolename`""
-                Return $result.Result.roles.Results.Row
+                Write-LogMessage -type Verbose -MSG "Returning all informatin about Group `"$Groupname`""
+                Return $result.Result.Group.Results.row
             }
         }
     }

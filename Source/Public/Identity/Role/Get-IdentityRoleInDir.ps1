@@ -1,0 +1,48 @@
+    <#
+.Synopsis
+    Short description
+.DESCRIPTION
+    Long description
+.EXAMPLE
+    Example of how to use this cmdlet
+.EXAMPLE
+    Another example of how to use this cmdlet
+.INPUTS
+    Inputs to this cmdlet (if any)
+.OUTPUTS
+    Output from this cmdlet (if any)
+.NOTES
+    General notes
+.COMPONENT
+    The component this cmdlet belongs to
+.ROLE
+    The role this cmdlet belongs to
+.FUNCTIONALITY
+    The functionality that best describes this cmdlet
+#>
+function Get-IdentityRoleInDir {
+    [CmdletBinding()]
+    param (
+        [Parameter(ValueFromRemainingArguments, DontShow)]
+        $CatchAll,
+        [Parameter(Mandatory)]
+        [Alias('url')]
+        [string]
+        $IdentityURL,
+        [Parameter(Mandatory)]
+        [Alias('header')]
+        $LogonToken,
+        [Parameter(Mandatory, ValueFromPipelineByPropertyName)]
+        [Alias('DirectoryServiceUuid','_ID')]
+        [string]
+        $Directory
+    )
+    Begin {
+        $PSBoundParameters.Remove("CatchAll")  | Out-Null
+    }
+    process {
+        $result = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryRolesAndRights?path=$Directory" -Method POST -Headers $logonToken -ContentType 'application/json'
+        Return $result.result.Results.Row
+
+    }
+}

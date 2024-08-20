@@ -1,39 +1,35 @@
-Function Write-LogMessage {
-    <#
+<#
 .SYNOPSIS
 	Method to log a message on screen and in a log file
 .DESCRIPTION
 	Logging The input Message to the Screen and the Log File.
 	The Message Type is presented in colours on the screen based on the type
-.PARAMETER LogFile
-	The Log File to write to. By default using the LOG_FILE_PATH
-.PARAMETER MSG
-	The message to log
-.PARAMETER Header
-	Adding a header line before the message
-.PARAMETER SubHeader
-	Adding a Sub header line before the message
-.PARAMETER Footer
-	Adding a footer line after the message
-.PARAMETER Type
-	The type of the message to log (Info, Warning, Error, Debug)
 #>
+Function Write-LogMessage {
+    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Scope = "Function" , Justification = 'Want to go to console and allow for colors')]
     [CmdletBinding()]
     param(
+        # The message to log
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [AllowEmptyString()]
         [String]$MSG,
+        # Adding a header line before the message
         [Parameter(Mandatory = $false)]
         [Switch]$Header,
+        # Adding a Sub header line before the message
         [Parameter(Mandatory = $false)]
         [Switch]$SubHeader,
+        # Adding a footer line after the message
         [Parameter(Mandatory = $false)]
         [Switch]$Footer,
+        # Write output to log file
         [Parameter(Mandatory = $false)]
         [Bool]$WriteLog = $true,
+        # The type of the message to log ('Info', 'Warning', 'Error', 'Debug', 'Verbose', 'Success', 'LogOnly', 'ErrorThrow')
         [Parameter(Mandatory = $false)]
         [ValidateSet('Info', 'Warning', 'Error', 'Debug', 'Verbose', 'Success', 'LogOnly', 'ErrorThrow')]
         [String]$type = 'Info',
+        # The Log File to write to. By default using the LOG_FILE_PATH
         [Parameter(Mandatory = $false)]
         [String]$LogFile
     )
@@ -48,11 +44,11 @@ Function Write-LogMessage {
             }
             If ($Header -and $WriteLog) {
                 '=======================================' | Out-File -Append -FilePath $LogFile
-                Write-Output '=======================================' -ForegroundColor Magenta
+                Write-Host '=======================================' -ForegroundColor Magenta
             }
             ElseIf ($SubHeader -and $WriteLog) {
                 '------------------------------------' | Out-File -Append -FilePath $LogFile
-                Write-Output '------------------------------------' -ForegroundColor Magenta
+                Write-Host '------------------------------------' -ForegroundColor Magenta
             }
             # Replace empty message with 'N/A'
             if ([string]::IsNullOrEmpty($Msg)) {
@@ -70,7 +66,7 @@ Function Write-LogMessage {
             switch ($type) {
                 { ($PSItem -eq 'Info') -or ($PSItem -eq 'LogOnly') } {
                     If ($PSItem -eq 'Info') {
-                        Write-Output $MSG.ToString() -ForegroundColor $(If ($Header -or $SubHeader) {
+                        Write-Host $MSG.ToString() -ForegroundColor $(If ($Header -or $SubHeader) {
                                 'Magenta'
                             }
                             Else {
@@ -81,17 +77,17 @@ Function Write-LogMessage {
                     break
                 }
                 'Success' {
-                    Write-Output $MSG.ToString() -ForegroundColor Green
+                    Write-Host $MSG.ToString() -ForegroundColor Green
                     $msgToWrite = "[SUCCESS]`t`t$Msg"
                     break
                 }
                 'Warning' {
-                    Write-Output $MSG.ToString() -ForegroundColor Yellow
+                    Write-Host $MSG.ToString() -ForegroundColor Yellow
                     $msgToWrite = "[WARNING]`t$Msg"
                     break
                 }
                 'Error' {
-                    Write-Output $MSG.ToString() -ForegroundColor Red
+                    Write-Host $MSG.ToString() -ForegroundColor Red
                     $msgToWrite = "[ERROR]`t`t$Msg"
                     break
                 }
@@ -122,7 +118,7 @@ Function Write-LogMessage {
             }
             If ($Footer -and $WriteLog) {
                 '=======================================' | Out-File -Append -FilePath $LogFile
-                Write-Output '=======================================' -ForegroundColor Magenta
+                Write-Host '=======================================' -ForegroundColor Magenta
             }
         }
         catch {
