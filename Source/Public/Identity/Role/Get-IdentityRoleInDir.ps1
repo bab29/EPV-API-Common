@@ -1,24 +1,25 @@
-    <#
-.Synopsis
-    Short description
+<#
+.SYNOPSIS
+Retrieves identity roles and rights from a specified directory.
+
 .DESCRIPTION
-    Long description
+The Get-IdentityRoleInDir function sends a POST request to the specified IdentityURL to retrieve roles and rights for a given directory. The function requires an identity URL, a logon token, and a directory identifier.
+
+.PARAMETER IdentityURL
+The URL of the identity service endpoint.
+
+.PARAMETER LogonToken
+The logon token used for authentication.
+
+.PARAMETER Directory
+The unique identifier of the directory service.
+
 .EXAMPLE
-    Example of how to use this cmdlet
-.EXAMPLE
-    Another example of how to use this cmdlet
-.INPUTS
-    Inputs to this cmdlet (if any)
-.OUTPUTS
-    Output from this cmdlet (if any)
+PS> Get-IdentityRoleInDir -IdentityURL "https://example.com" -LogonToken $token -Directory "12345"
+This example retrieves the roles and rights for the directory with the identifier "12345" from the specified identity service URL.
+
 .NOTES
-    General notes
-.COMPONENT
-    The component this cmdlet belongs to
-.ROLE
-    The role this cmdlet belongs to
-.FUNCTIONALITY
-    The functionality that best describes this cmdlet
+The function removes the CatchAll parameter from the bound parameters before processing the request.
 #>
 function Get-IdentityRoleInDir {
     [CmdletBinding()]
@@ -33,16 +34,15 @@ function Get-IdentityRoleInDir {
         [Alias('header')]
         $LogonToken,
         [Parameter(Mandatory, ValueFromPipelineByPropertyName)]
-        [Alias('DirectoryServiceUuid','_ID')]
+        [Alias('DirectoryServiceUuid', '_ID')]
         [string]
         $Directory
     )
     Begin {
-        $PSBoundParameters.Remove("CatchAll")  | Out-Null
+        $PSBoundParameters.Remove("CatchAll") | Out-Null
     }
-    process {
-        $result = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryRolesAndRights?path=$Directory" -Method POST -Headers $logonToken -ContentType 'application/json'
-        Return $result.result.Results.Row
-
+    Process {
+        $result = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryRolesAndRights?path=$Directory" -Method POST -Headers $LogonToken -ContentType 'application/json'
+        return $result.result.Results.Row
     }
 }

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <Configuration>
   <ViewDefinitions>
     <View>
@@ -9,56 +9,22 @@
       <TableControl>
         <AutoSize/>
         <TableHeaders>
-          <TableColumnHeader>
-            <Label>Safe Name</Label>
-            <Alignment>Left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Description</Label>
-            <Alignment>Left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Creator</Label>
-            <Alignment>Left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Managing CPM</Label>
-            <Alignment>Left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Retention Policy</Label>
-            <Alignment>Left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Creation Date</Label>
-            <Alignment>Left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Last Updated</Label>
-            <Alignment>Left</Alignment>
-          </TableColumnHeader>
-          <TableColumnHeader>
-            <Label>Accounts</Label>
-            <Alignment>Left</Alignment>
-          </TableColumnHeader>
+          <TableColumnHeader><Label>Safe Name</Label><Alignment>Left</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Description</Label><Alignment>Left</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Creator</Label><Alignment>Left</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Managing CPM</Label><Alignment>Left</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Retention Policy</Label><Alignment>Left</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Creation Date</Label><Alignment>Left</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Last Updated</Label><Alignment>Left</Alignment></TableColumnHeader>
+          <TableColumnHeader><Label>Accounts</Label><Alignment>Left</Alignment></TableColumnHeader>
         </TableHeaders>
         <TableRowEntries>
           <TableRowEntry>
             <TableColumnItems>
-              <TableColumnItem>
-                <PropertyName>SafeName</PropertyName>
-              </TableColumnItem>
-              <TableColumnItem>
-                <PropertyName>Description</PropertyName>
-              </TableColumnItem>
-              <TableColumnItem>
-                <ScriptBlock>
-                  $PSitem.creator.Name
-                </ScriptBlock>
-              </TableColumnItem>
-              <TableColumnItem>
-                <PropertyName>managingCPM</PropertyName>
-              </TableColumnItem>
+              <TableColumnItem><PropertyName>SafeName</PropertyName></TableColumnItem>
+              <TableColumnItem><PropertyName>Description</PropertyName></TableColumnItem>
+              <TableColumnItem><ScriptBlock>$PSitem.creator.Name</ScriptBlock></TableColumnItem>
+              <TableColumnItem><PropertyName>managingCPM</PropertyName></TableColumnItem>
               <TableColumnItem>
                 <ScriptBlock>
                   $(if([string]::IsNullOrEmpty($PSitem.numberOfVersionsRetention)) {"$($PSitem.numberOfDaysRetention) days"} else {"$($PSitem.numberOfVersionsRetention) versions"})
@@ -74,11 +40,7 @@
                   ([datetime]'1/1/1970').ToLocalTime().AddMicroseconds($PSItem.lastModificationTime).ToString("G")
                 </ScriptBlock>
               </TableColumnItem>
-              <TableColumnItem>
-                <ScriptBlock>
-                  $PSItem.accounts.Name -join ", "
-                </ScriptBlock>
-              </TableColumnItem>
+              <TableColumnItem><ScriptBlock>$PSItem.accounts.Name -join ", "</ScriptBlock></TableColumnItem>
             </TableColumnItems>
           </TableRowEntry>
         </TableRowEntries>
@@ -93,48 +55,26 @@
         <ListEntries>
           <ListEntry>
             <ListItems>
-              <ListItem>
-                <Label>Safe Name</Label>
-                <PropertyName>SafeName</PropertyName>
-              </ListItem>
-              <ListItem>
-                <Label>Description</Label>
-                <PropertyName>Description</PropertyName>
-              </ListItem>
-              <ListItem>
-                <Label>Creator</Label>
-                <ScriptBlock>
-                  $PSitem.creator.Name
-                </ScriptBlock>
-              </ListItem>
-              <ListItem>
-                <Label>Managing CPM</Label>
-                <PropertyName>managingCPM</PropertyName>
-              </ListItem>
-              <ListItem>
-                <Label>Retention Policy</Label>
+              <ListItem><Label>Safe Name</Label><PropertyName>SafeName</PropertyName></ListItem>
+              <ListItem><Label>Description</Label><PropertyName>Description</PropertyName></ListItem>
+              <ListItem><Label>Creator</Label><ScriptBlock>$PSitem.creator.Name</ScriptBlock></ListItem>
+              <ListItem><Label>Managing CPM</Label><PropertyName>managingCPM</PropertyName></ListItem>
+              <ListItem><Label>Retention Policy</Label>
                 <ScriptBlock>
                   $(if([string]::IsNullOrEmpty($PSitem.numberOfVersionsRetention)) {"$($PSitem.numberOfDaysRetention) days"} else {"$($PSitem.numberOfVersionsRetention) versions"})
                 </ScriptBlock>
               </ListItem>
-              <ListItem>
-                <Label>Creation Date UTC</Label>
+              <ListItem><Label>Creation Date UTC</Label>
                 <ScriptBlock>
                   ([datetime]'1/1/1970').ToLocalTime().AddSeconds($PSItem.creationTime)
                 </ScriptBlock>
               </ListItem>
-              <ListItem>
-                <Label>Last Updated UTC</Label>
+              <ListItem><Label>Last Updated UTC</Label>
                 <ScriptBlock>
                   ([datetime]'1/1/1970').ToLocalTime().AddMicroseconds($PSItem.lastModificationTime)
                 </ScriptBlock>
               </ListItem>
-              <ListItem>
-                <Label>Accounts</Label>
-                <ScriptBlock>
-                  $PSItem.accounts.Name -join ", "
-                </ScriptBlock>
-              </ListItem>
+              <ListItem><Label>Accounts</Label><ScriptBlock>$PSItem.accounts.Name -join ", "</ScriptBlock></ListItem>
             </ListItems>
           </ListEntry>
         </ListEntries>

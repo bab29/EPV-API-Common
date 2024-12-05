@@ -1,71 +1,100 @@
+<#
+.SYNOPSIS
+Exports information about safes to a CSV file.
+
+.DESCRIPTION
+The Export-Safe function exports details about safes to a specified CSV file. It includes options to force overwrite the file, include account details, and include additional safe details. The function can also exclude system safes from the export.
+
+.PARAMETER CSVPath
+The path to the CSV file where the safe information will be exported. Default is ".\SafeExport.csv".
+
+.PARAMETER Force
+If specified, forces the overwrite of the existing CSV file.
+
+.PARAMETER Safe
+The safe object to be exported. This parameter is mandatory and accepts input from the pipeline.
+
+.PARAMETER IncludeAccounts
+If specified, includes account details in the export.
+
+.PARAMETER IncludeDetails
+If specified, includes additional details about the safe in the export.
+
+.PARAMETER includeSystemSafes
+If specified, includes system safes in the export. This parameter is hidden from the user.
+
+.PARAMETER CPMUser
+An array of CPM user names. This parameter is hidden from the user.
+
+.EXAMPLE
+Export-Safe -CSVPath "C:\Exports\SafeExport.csv" -Force -Safe $safe -IncludeAccounts -IncludeDetails
+
+This example exports the details of the specified safe to "C:\Exports\SafeExport.csv", including account details and additional safe details, and forces the overwrite of the existing file.
+
+.NOTES
+The function logs messages at various stages of execution and handles errors gracefully. It exits with code 80 if the CSV file already exists and the Force switch is not specified.
+
+#>
+
 function Export-Safe {
     [CmdletBinding()]
     param (
         [Parameter()]
-        [string]
-        $CSVPath = ".\SafeExport.csv",
-        [switch]
-        $Force,
+        [string] $CSVPath = ".\SafeExport.csv",
+        [switch] $Force,
         [Parameter(Mandatory, ValueFromPipeline, ValueFromPipelineByPropertyName)]
-        [Safe]
-        $Safe,
-        [switch]
-        $IncludeAccounts,
-        [switch]
-        $IncludeDetails,
-        # Parameter help description
+        [Safe] $Safe,
+        [switch] $IncludeAccounts,
+        [switch] $IncludeDetails,
         [Parameter(DontShow)]
-        [switch]
-        $includeSystemSafes,
-        # Parameter help description
+        [switch] $includeSystemSafes,
         [Parameter(DontShow)]
-        [string[]]
-        $CPMUser
+        [string[]] $CPMUser
     )
     begin {
-        [String[]]$SafesToRemove = @('System', 'Pictures', 'VaultInternal', 'Notification Engine', 'SharedAuth_Internal', 'PVWAUserPrefs',
+        [String[]]$SafesToRemove = @(
+            'System', 'Pictures', 'VaultInternal', 'Notification Engine', 'SharedAuth_Internal', 'PVWAUserPrefs',
             'PVWAConfig', 'PVWAReports', 'PVWATaskDefinitions', 'PVWAPrivateUserPrefs', 'PVWAPublicData', 'PVWATicketingSystem',
-            'AccountsFeed', 'PSM', 'xRay', 'PIMSuRecordings', 'xRay_Config', 'AccountsFeedADAccounts', 'AccountsFeedDiscoveryLogs', 'PSMSessions', 'PSMLiveSessions', 'PSMUniversalConnectors',
-            'PSMNotifications', 'PSMUnmanagedSessionAccounts', 'PSMRecordings', 'PSMPADBridgeConf', 'PSMPADBUserProfile', 'PSMPADBridgeCustom', 'PSMPConf', 'PSMPLiveSessions'
-            'AppProviderConf', 'PasswordManagerTemp', 'PasswordManager_Pending', 'PasswordManagerShared', 'SCIM Config', 'TelemetryConfig')
+            'AccountsFeed', 'PSM', 'xRay', 'PIMSuRecordings', 'xRay_Config', 'AccountsFeedADAccounts', 'AccountsFeedDiscoveryLogs',
+            'PSMSessions', 'PSMLiveSessions', 'PSMUniversalConnectors', 'PSMNotifications', 'PSMUnmanagedSessionAccounts',
+            'PSMRecordings', 'PSMPADBridgeConf', 'PSMPADBUserProfile', 'PSMPADBridgeCustom', 'PSMPConf', 'PSMPLiveSessions',
+            'AppProviderConf', 'PasswordManagerTemp', 'PasswordManager_Pending', 'PasswordManagerShared', 'SCIM Config', 'TelemetryConfig'
+        )
         [string[]]$cpmSafes = @()
         $CPMUser | ForEach-Object {
-            $cpmSafes += "$($PSitem)"
-            $cpmSafes += "$($PSitem)_Accounts"
-            $cpmSafes += "$($PSitem)_ADInternal"
-            $cpmSafes += "$($PSitem)_Info"
-            $cpmSafes += "$($PSitem)_workspace"
+            $cpmSafes += "$($_)"
+            $cpmSafes += "$($_)_Accounts"
+            $cpmSafes += "$($_)_ADInternal"
+            $cpmSafes += "$($_)_Info"
+            $cpmSafes += "$($_)_workspace"
         }
         $SafesToRemove += $cpmSafes
         $SafeCount = 0
         if (Test-Path $CSVPath) {
-            Try {
-                Write-LogMessage -type Verbose -msg "The file `'$CSVPath`' already exists. Checking for Force switch"
-                If ($Force) {
+            try {
+                Write-LogMessage -type Verbose -MSG "The file '$CSVPath' already exists. Checking for Force switch"
+                if ($Force) {
                     Remove-Item $CSVPath
-                    Write-LogMessage -type Verbose -msg "The file `'$CSVPath`' was removed."
-                }
-                else {
-                    Write-LogMessage -type Verbose -msg "The file `'$CSVPath`' already exists and the switch `"Force`" was not passed. Exit with exit code 80"
-                    Write-LogMessage -type Error -msg "The file `'$CSVPath`' already exists."
+                    Write-LogMessage -type Verbose -MSG "The file '$CSVPath' was removed."
+                } else {
+                    Write-LogMessage -type Verbose -MSG "The file '$CSVPath' already exists and the switch 'Force' was not passed. Exit with exit code 80"
+                    Write-LogMessage -type Error -MSG "The file '$CSVPath' already exists."
                     Exit 80
                 }
-            }
-            catch {
-                Write-LogMessage -type ErrorThrow -msg "Error while trying to remove`'$CSVPath`'"
+            } catch {
+                Write-LogMessage -type ErrorThrow -MSG "Error while trying to remove '$CSVPath'"
             }
         }
     }
-    Process {
-
-        Try {
-            IF (-not $includeSystemSafes) {
-                If ($safe.SafeName -in $SafesToRemove) {
-                    Write-LogMessage -type Verbose -msg "Safe `"$($Safe.SafeName)`" is a system safe, skipping"
+    process {
+        try {
+            if (-not $includeSystemSafes) {
+                if ($safe.SafeName -in $SafesToRemove) {
+                    Write-LogMessage -type Verbose -MSG "Safe '$($Safe.SafeName)' is a system safe, skipping"
                     return
                 }
             }
-            Write-LogMessage -type Verbose -msg "Working with safe `"$($Safe.Safename)`""
+            Write-LogMessage -type Verbose -MSG "Working with safe '$($Safe.Safename)'"
             $item = [pscustomobject]@{
                 "Safe Name"        = $Safe.Safename
                 "Description"      = $Safe.Description
@@ -74,8 +103,8 @@ function Export-Safe {
                 "Creation Date"    = ([datetime]'1/1/1970').ToLocalTime().AddSeconds($Safe.creationTime)
                 "Last Modified"    = ([datetime]'1/1/1970').ToLocalTime().AddMicroseconds($Safe.lastModificationTime)
             }
-            If ($IncludeDetails) {
-                Write-LogMessage -type Verbose -msg "Including Details"
+            if ($IncludeDetails) {
+                Write-LogMessage -type Verbose -MSG "Including Details"
                 $item | Add-Member -MemberType NoteProperty -Name "OLAC Enabled" -Value $safe.OLAC
                 $item | Add-Member -MemberType NoteProperty -Name "Auto Purge Enabled" -Value $safe.autoPurgeEnabled
                 $item | Add-Member -MemberType NoteProperty -Name "Safe ID" -Value $safe.safeNumber
@@ -84,24 +113,21 @@ function Export-Safe {
                 $item | Add-Member -MemberType NoteProperty -Name "Creator ID" -Value $Safe.Creator.id
                 $item | Add-Member -MemberType NoteProperty -Name "Location" -Value $safe.Location
                 $item | Add-Member -MemberType NoteProperty -Name "Membership Expired" -Value $safe.isExpiredMember
-
             }
-            If ($includeAccounts) {
-                Write-LogMessage -type Verbose -msg "Including Accounts"
-                $item.Accounts = $Safe.accounts.Name -join ", "
+            if ($IncludeAccounts) {
+                Write-LogMessage -type Verbose -MSG "Including Accounts"
                 $item | Add-Member -MemberType NoteProperty -Name "Accounts" -Value $($Safe.accounts.Name -join ", ")
             }
-            Write-LogMessage -type Verbose -msg "Adding safe `"$($Safe.Safename)`" to CSV `"$CSVPath`""
-            $item | Export-Csv -Append $CSVPath
+            Write-LogMessage -type Verbose -MSG "Adding safe '$($Safe.Safename)' to CSV '$CSVPath'"
+            $item | Export-Csv -Append $CSVPath -NoTypeInformation
             $SafeCount += 1
-        }
-        Catch {
-            Write-LogMessage -type Error -msg $PSitem
+        } catch {
+            Write-LogMessage -type Error -MSG $_
         }
     }
-    End {
-        Write-LogMessage -type Info -msg "Exported $SafeCount safes succesfully"
-        Write-LogMessage -Type Verbose -msg "Completed succesfully, returning exit code 0"
+    end {
+        Write-LogMessage -type Info -MSG "Exported $SafeCount safes successfully"
+        Write-LogMessage -type Verbose -MSG "Completed successfully, returning exit code 0"
         Exit 0
     }
 }

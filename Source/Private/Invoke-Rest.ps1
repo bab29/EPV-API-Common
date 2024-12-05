@@ -1,109 +1,172 @@
 <#
 .SYNOPSIS
-Invoke REST Method
+    Invokes a REST API call with the specified parameters.
+
 .DESCRIPTION
-Invoke REST Method
+    The Invoke-Rest function is designed to make REST API calls using various HTTP methods such as GET, POST, DELETE, PATCH, and PUT.
+    It supports custom headers, request bodies, and content types. The function also includes error handling and logging mechanisms.
+
 .PARAMETER Command
-The REST Command method to run (GET, POST, PATCH, DELETE)
+    Specifies the HTTP method to use for the REST API call.
+    Valid values are 'GET', 'POST', 'DELETE', 'PATCH', and 'PUT'. This parameter is mandatory.
+
 .PARAMETER URI
-The URI to use as REST API
+    Specifies the URI of the REST API endpoint. This parameter is mandatory.
+
 .PARAMETER Header
-The Header as Dictionary object
+    Specifies the headers to include in the REST API call. This parameter is optional.
+
 .PARAMETER Body
-The REST Body
+    Specifies the body content to include in the REST API call. This parameter is optional.
+
+.PARAMETER ContentType
+    Specifies the content type of the request body. The default value is 'application/json'. This parameter is optional.
+
 .PARAMETER ErrAction
-The Error Action to perform in case of error. By default "Continue"
+    Specifies the action to take if an error occurs.
+    Valid values are 'Continue', 'Ignore', 'Inquire', 'SilentlyContinue', 'Stop', and 'Suspend'. The default value is 'Continue'. This parameter is optional.
+
+.EXAMPLE
+    Invoke-Rest -Command GET -URI "https://api.example.com/data" -Header @{Authorization = "Bearer token"}
+
+    This example makes a GET request to the specified URI with an authorization header.
+
+.EXAMPLE
+    Invoke-Rest -Command POST -URI "https://api.example.com/data" -Body '{"name":"value"}' -ContentType "application/json"
+
+    This example makes a POST request to the specified URI with a JSON body.
+
+.NOTES
+    This function includes extensive logging for debugging purposes. It logs the entry and exit points, as well as detailed information about the request and response.
 #>
+
 Function Invoke-Rest {
-    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Scope = "Function" , Justification = 'Used in deep debugging')]
+    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Scope = "Function", Justification = 'Used in deep debugging')]
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         [Alias('Method')]
         [ValidateSet('GET', 'POST', 'DELETE', 'PATCH', 'PUT')]
         [String]$Command,
+
         [Alias('PCloudURL', 'IdentityURL', 'URL')]
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
         [String]$URI,
+
         [Alias('LogonToken', 'Headers')]
         [Parameter(Mandatory = $false)]
         $Header,
+
         [Parameter(Mandatory = $false)]
         [String]$Body,
+
         [Parameter(Mandatory = $false)]
         [String]$ContentType = 'application/json',
+
         [Parameter(Mandatory = $false)]
         [ValidateSet('Continue', 'Ignore', 'Inquire', 'SilentlyContinue', 'Stop', 'Suspend')]
         [String]$ErrAction = 'Continue'
     )
+
     Process {
-        Write-LogMessage -Type Verbose -Msg 'Entering Invoke-Rest'
+        Write-LogMessage -type Verbose -MSG 'Entering Invoke-Rest'
         $restResponse = ''
+
         try {
-            Write-LogMessage -Type Verbose -Msg "Invoke-RestMethod -Uri $URI -Method $Command -Header $($Header |ConvertTo-Json -Compress -Depth 9) -ContentType $ContentType -TimeoutSec 2700"
+            Write-LogMessage -type Verbose -MSG "Invoke-RestMethod -Uri $URI -Method $Command -Header $($Header | ConvertTo-Json -Compress -Depth 9) -ContentType $ContentType -TimeoutSec 2700"
+
             if ([string]::IsNullOrEmpty($Body)) {
                 $restResponse = Invoke-RestMethod -Uri $URI -Method $Command -Header $Header -ContentType $ContentType -TimeoutSec 2700 -ErrorAction $ErrAction
             }
             else {
-                Write-LogMessage -Type Verbose -Msg "Body Found: `n$body"
+                Write-LogMessage -type Verbose -MSG "Body Found: `n$Body"
                 $restResponse = Invoke-RestMethod -Uri $URI -Method $Command -Body $Body -Header $Header -ContentType $ContentType -TimeoutSec 2700 -ErrorAction $ErrAction
             }
         }
-        catch [System.Net.WebException] {
+        catch [System.Net.WebException], [Microsoft.PowerShell.Commands.HttpResponseException] {
+            $errorDetails = $PSItem.ErrorDetails.Message | ConvertFrom-Json
             if ($ErrAction -match ('\bContinue\b|\bInquire\b|\bStop\b|\bSuspend\b')) {
-                IF (![string]::IsNullOrEmpty($(($PSItem.ErrorDetails.Message | ConvertFrom-Json).ErrorCode))) {
-                    If (($($PSItem.ErrorDetails.Message | ConvertFrom-Json).ErrorCode -eq 'ITATS127E')) {
-                        Write-LogMessage -Type Error -Msg 'Was able to connect to the PVWA successfully, but the account was locked'
-                        Write-LogMessage -Type Error -Msg "URI:  $URI"
-                        Write-LogMessage -Type Verbose -Msg 'Exiting Invoke-Rest'
+                Write-LogMessage -type Error -MSG "Command: $Command`tURI:  $URI"
+                If (-not [string]::IsNullOrEmpty($Body)) {
+                    Write-LogMessage -type Verbose -MSG "Body:  $Body"
+                }
+                if (-not [string]::IsNullOrEmpty($errorDetails.ErrorCode)) {
+                    if ($errorDetails.ErrorCode -eq 'ITATS127E') {
+                        Write-LogMessage -type Error -MSG 'Was able to connect to the PVWA successfully, but the account was locked'
+                        Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
                         Throw [System.Management.Automation.RuntimeException] 'Account Locked'
                     }
-                    ElseIf (!($($PSItem.ErrorDetails.Message | ConvertFrom-Json).ErrorCode -in $global:SkipErrorCode)) {
-                        Write-LogMessage -Type Error -Msg 'Was able to connect to the PVWA successfully, but the command resulted in a error'
-                        Write-LogMessage -Type Error -Msg "URI:  $URI"
-                        Write-LogMessage -Type Error -Msg "Command:  $Command"
-                        Write-LogMessage -Type Error -Msg "Body:  $Body"
-                        Write-LogMessage -Type Error -Msg "Returned ErrorCode: $(($PSItem.ErrorDetails.Message|ConvertFrom-Json).ErrorCode)"
-                        Write-LogMessage -Type Error -Msg "Returned ErrorMessage: $(($PSItem.ErrorDetails.Message|ConvertFrom-Json).ErrorMessage)"
-                        Write-LogMessage -Type Verbose $PSItem
+                    elseif (!($errorDetails.ErrorCode -in $global:SkipErrorCode)) {
+                        Write-LogMessage -type Error -MSG 'Was able to connect to the PVWA successfully, but the command resulted in an error'
+                        Write-LogMessage -type Error -MSG "Returned ErrorCode: $($errorDetails.ErrorCode)"
+                        Write-LogMessage -type Error -MSG "Returned ErrorMessage: $($errorDetails.ErrorMessage)"
+                        Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
+                        Throw $PSItem
                     }
                 }
-                Else {
-                    Write-LogMessage -Type Error -Msg "Error Message: $PSItem"
-                    Write-LogMessage -Type Error -Msg "Exception Message: $($PSItem.Exception.Message)"
-                    Write-LogMessage -Type Error -Msg "Status Code: $($PSItem.Exception.Response.StatusCode.value__)"
-                    Write-LogMessage -Type Error -Msg "Status Description: $($PSItem.Exception.Response.StatusDescription)"
-                    Write-LogMessage -Type Verbose $PSItem
+                else {
+                    Write-LogMessage -type Error -MSG "Exception Message: $($PSItem.Exception.Message)"
+                    Write-LogMessage -type Error -MSG "Error Message: $PSItem"
+                    Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
+                    Throw $PSItem
+                }
+            }
+            elseif ($ErrAction -eq 'silentlyContinue') {
+                Write-LogMessage -type Verbose -MSG "Command: $Command`tURI:  $URI"
+                If (-not [string]::IsNullOrEmpty($Body)) {
+                    Write-LogMessage -type Verbose -MSG "Body:  $Body"
+                }
+                IF ([string]::IsNullOrEmpty($errorDetails)) {
+                    Write-LogMessage -type Verbose -MSG "Exception: $PSItem"
+                    Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
+                    Throw $PSItem
+                }
+                else {
+                    Write-LogMessage -type Verbose -MSG "URI:  $URI"
+                    Write-LogMessage -type Verbose -MSG "Command:  $Command"
+                    If (-not [string]::IsNullOrEmpty($Body)) {
+                        Write-LogMessage -type Verbose -MSG "Body:  $Body"
+                    }
+                    Write-LogMessage -type Verbose -MSG "Error ErrorCode: $($errorDetails.ErrorCode)"
+                    Write-LogMessage -type Verbose -MSG "Error ErrorMessage: $($errorDetails.ErrorMessage)"
+                    Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
+                    Throw $PSItem
                 }
             }
             $restResponse = $null
         }
         catch {
-            Write-LogMessage -Type Error -Msg "`tError Message: $PSItem"
-            Write-LogMessage -Type Verbose $PSItem
-            Write-LogMessage -Type Verbose -Msg 'Exiting Invoke-Rest'
-            Throw $(New-Object System.Exception ("Invoke-Rest: Error in running $Command on '$URI'", $PSItem.Exception))
+            If ($ErrAction -ne "SilentlyContinue") {
+                Write-LogMessage -type Error -MSG "`tError Message: $PSItem"
+            }
+            else {
+                Write-LogMessage -type Verbose -MSG "`tError Message: $PSItem"
+            }
+            Write-LogMessage -type Verbose $PSItem
+            Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
+            Throw $PSItem
         }
-        If ($URI -match 'Password/Retrieve') {
-            Write-LogMessage -Type Verbose -Msg 'Invoke-REST Response: ***********'
+
+        if ($URI -match 'Password/Retrieve') {
+            Write-LogMessage -type Verbose -MSG 'Invoke-REST Response: ***********'
         }
         else {
-            If ($global:SuperVerbose) {
-                Write-LogMessage -Type Verbose -Msg "Invoke-REST Response Type: $($restResponse.GetType().Name)"
-                $type = $($restResponse.GetType().Name)
-                IF (('String' -ne $type)) {
-                    Write-LogMessage -Type Verbose -Msg "Invoke-REST ConvertTo-Json Response: $($restResponse |ConvertTo-Json -Depth 9 -Compress)"
+            if ($global:SuperVerbose) {
+                Write-LogMessage -type Verbose -MSG "Invoke-REST Response Type: $($restResponse.GetType().Name)"
+                $type = $restResponse.GetType().Name
+                if ('String' -ne $type) {
+                    Write-LogMessage -type Verbose -MSG "Invoke-REST ConvertTo-Json Response: $($restResponse | ConvertTo-Json -Depth 9 -Compress)"
                 }
                 else {
-                    Write-LogMessage -Type Verbose -Msg "Invoke-REST Response: $($restResponse)"
+                    Write-LogMessage -type Verbose -MSG "Invoke-REST Response: $restResponse"
                 }
             }
             else {
-                Write-LogMessage -Type Verbose -Msg "Invoke-REST Response: $($restResponse)"
+                Write-LogMessage -type Verbose -MSG "Invoke-REST Response: $restResponse"
             }
         }
-        Write-LogMessage -Type Verbose -Msg 'Exiting Invoke-Rest'
+        Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
         return $restResponse
     }
 }

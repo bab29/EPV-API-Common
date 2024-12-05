@@ -1,3 +1,41 @@
+<#
+.SYNOPSIS
+Exports safe member information to a CSV file.
+
+.DESCRIPTION
+The Export-SafeMember function exports information about safe members to a specified CSV file.
+It allows filtering out system safes and includes options to force overwrite the CSV file if it already exists.
+
+.PARAMETER CSVPath
+Specifies the path to the CSV file where the safe member information will be exported.
+Defaults to ".\SafeMemberExport.csv".
+
+.PARAMETER Force
+If specified, forces the overwrite of the CSV file if it already exists.
+
+.PARAMETER SafeMember
+Specifies the safe member object to be exported. This parameter is mandatory and accepts input from the pipeline.
+
+.PARAMETER includeSystemSafes
+If specified, includes system safes in the export. This parameter is hidden from the help documentation.
+
+.PARAMETER CPMUser
+Specifies an array of CPM user names. This parameter is hidden from the help documentation.
+
+.EXAMPLE
+Export-SafeMember -CSVPath "C:\Exports\SafeMembers.csv" -SafeMember $safeMember
+
+This example exports the safe member information to "C:\Exports\SafeMembers.csv".
+
+.EXAMPLE
+$safeMembers | Export-SafeMember -CSVPath "C:\Exports\SafeMembers.csv" -Force
+
+This example exports the safe member information from the pipeline to "C:\Exports\SafeMembers.csv",
+forcing the overwrite of the file if it already exists.
+
+.NOTES
+The function logs verbose messages about its operations and handles errors gracefully.
+#>
 function Export-SafeMember {
     [CmdletBinding()]
     param (
@@ -36,19 +74,19 @@ function Export-SafeMember {
         $SafeMemberCount = 0
         if (Test-Path $CSVPath) {
             Try {
-                Write-LogMessage -type Verbose -msg "The file `'$CSVPath`' already exists. Checking for Force switch"
+                Write-LogMessage -type Verbose -MSG "The file `'$CSVPath`' already exists. Checking for Force switch"
                 If ($Force) {
                     Remove-Item $CSVPath
-                    Write-LogMessage -type Verbose -msg "The file `'$CSVPath`' was removed."
+                    Write-LogMessage -type Verbose -MSG "The file `'$CSVPath`' was removed."
                 }
                 else {
-                    Write-LogMessage -type Verbose -msg "The file `'$CSVPath`' already exists and the switch `"Force`" was not passed. Exit with exit code 80"
-                    Write-LogMessage -type Error -msg "The file `'$CSVPath`' already exists."
+                    Write-LogMessage -type Verbose -MSG "The file `'$CSVPath`' already exists and the switch `"Force`" was not passed. Exit with exit code 80"
+                    Write-LogMessage -type Error -MSG "The file `'$CSVPath`' already exists."
                     Exit 80
                 }
             }
             catch {
-                Write-LogMessage -type ErrorThrow -msg "Error while trying to remove`'$CSVPath`'"
+                Write-LogMessage -type ErrorThrow -MSG "Error while trying to remove`'$CSVPath`'"
             }
         }
     }
@@ -57,11 +95,11 @@ function Export-SafeMember {
         Try {
             IF (-not $includeSystemSafes) {
                 If ($PSitem.SafeName -in $SafesToRemove) {
-                    Write-LogMessage -type Verbose -msg "Safe `"$($PSitem.SafeName)`" is a system safe, skipping"
+                    Write-LogMessage -type Verbose -MSG "Safe `"$($PSitem.SafeName)`" is a system safe, skipping"
                     return
                 }
             }
-            Write-LogMessage -type Verbose -msg "Working with safe `"$($PSitem.Safename)`" and safe member `"$($PSitem.memberName)`""
+            Write-LogMessage -type Verbose -MSG "Working with safe `"$($PSitem.Safename)`" and safe member `"$($PSitem.memberName)`""
             $item = [pscustomobject]@{
                 "Safe Name"                                  = $PSitem.safeName
                 "Member Name"                                = $PSitem.memberName
@@ -90,17 +128,17 @@ function Export-SafeMember {
 
             }
 
-            Write-LogMessage -type Verbose -msg "Adding safe `"$($PSitem.Safename)`" and safe member `"$($PSitem.memberName)`" to CSV `"$CSVPath`""
+            Write-LogMessage -type Verbose -MSG "Adding safe `"$($PSitem.Safename)`" and safe member `"$($PSitem.memberName)`" to CSV `"$CSVPath`""
             $item | Export-Csv -Append $CSVPath
             $SafeMemberCount += 1
         }
         Catch {
-            Write-LogMessage -type Error -msg $PSitem
+            Write-LogMessage -type Error -MSG $PSitem
         }
     }
     End {
-        Write-LogMessage -type Info -msg "Exported $SafeMemberCount safe members succesfully"
-        Write-LogMessage -Type Verbose -msg "Completed succesfully, returning exit code 0"
+        Write-LogMessage -type Info -MSG "Exported $SafeMemberCount safe members succesfully"
+        Write-LogMessage -type Verbose -MSG "Completed successfully, returning exit code 0"
         Exit 0
     }
 }

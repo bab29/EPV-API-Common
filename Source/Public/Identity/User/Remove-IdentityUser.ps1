@@ -1,27 +1,37 @@
+<#
+.SYNOPSIS
+Removes identity users from the system.
+
+.DESCRIPTION
+The Remove-IdentityUser function removes identity users from the system based on the provided parameters.
+It supports confirmation prompts and can process input from the pipeline.
+
+.PARAMETER Force
+A switch to force the removal without confirmation.
+
+.PARAMETER IdentityURL
+The URL of the identity service.
+
+.PARAMETER LogonToken
+The logon token for authentication.
+
+.PARAMETER User
+The username of the identity user to be removed. This parameter can be provided from the pipeline by property name.
+
+.PARAMETER mail
+The email of the identity user to be removed. This parameter can be provided from the pipeline by property name.
+
+.EXAMPLE
+Remove-IdentityUser -IdentityURL "https://identity.example.com" -LogonToken $token -User "jdoe"
+
+.EXAMPLE
+Remove-IdentityUser -IdentityURL "https://identity.example.com" -LogonToken $token -mail "jdoe@example.com"
+
+.NOTES
+This function requires the Write-LogMessage and Invoke-Rest functions to be defined elsewhere in the script or module.
+#>
 
 function Remove-IdentityUser {
-    <#
-.Synopsis
-    Short description
-.DESCRIPTION
-    Long description
-.EXAMPLE
-    Example of how to use this cmdlet
-.EXAMPLE
-    Another example of how to use this cmdlet
-.INPUTS
-    Inputs to this cmdlet (if any)
-.OUTPUTS
-    Output from this cmdlet (if any)
-.NOTES
-    General notes
-.COMPONENT
-    The component this cmdlet belongs to
-.ROLE
-    The role this cmdlet belongs to
-.FUNCTIONALITY
-    The functionality that best describes this cmdlet
-#>
     [CmdletBinding(
         SupportsShouldProcess,
         ConfirmImpact = 'High'
@@ -42,65 +52,71 @@ function Remove-IdentityUser {
         [Alias('email')]
         [string]
         $mail
-    ) begin {
-        $PSBoundParameters.Remove("CatchAll")  | Out-Null
-        if ($Force -and -not $Confirm) {
+    )
+
+    begin {
+        if ($Force) {
             Write-LogMessage -type Warning -MSG 'Confirmation prompt suppressed, proceeding with all removals'
             $ConfirmPreference = 'None'
         }
-        [string[]]$userList = @()
-        [string[]]$userNames = @()
+        $userList = @()
+        $userNames = @()
     }
+
     process {
         $userID = Get-IdentityUser @PSBoundParameters
-        IF ([string]::IsNullOrEmpty($userID)) {
-            If ([string]::IsNullOrEmpty($user) -and [string]::IsNullOrEmpty($user)) {
+        if ([string]::IsNullOrEmpty($userID)) {
+            if ([string]::IsNullOrEmpty($User) -and [string]::IsNullOrEmpty($mail)) {
                 Write-LogMessage -type Warning -MSG 'Username or mail not provided'
-                Return
+                return
             }
-            elseif (![string]::IsNullOrEmpty($user) -and [string]::IsNullOrEmpty($user)) {
-                Write-LogMessage -type Warning -MSG "User `"$user`" not found"
-                Return
+            elseif (![string]::IsNullOrEmpty($User)) {
+                Write-LogMessage -type Warning -MSG "User `"$User`" not found"
+                return
             }
-            elseif ([string]::IsNullOrEmpty($user) -and ![string]::IsNullOrEmpty($user)) {
-                Write-LogMessage -type Warning -MSG "Mail `"$mail`" Not Found"
-                Return
+            elseif (![string]::IsNullOrEmpty($mail)) {
+                Write-LogMessage -type Warning -MSG "Mail `"$mail`" not found"
+                return
             }
             else {
-                Write-LogMessage -type Warning -MSG "User `"$user`" or mail `"$mail`" not found"
-                Return
+                Write-LogMessage -type Warning -MSG "User `"$User`" or mail `"$mail`" not found"
+                return
             }
         }
+
         Write-LogMessage -type Info -MSG "A total of $($userID.Count) user accounts found"
         $userID | ForEach-Object {
-            if ($PSCmdlet.ShouldProcess($PSItem.SystemName, 'Remove-IdentityUser')) {
-                $userNames += [string]$($PSItem.SystemName)
-                $userList += [string]$($PSItem.InternalName)
+            if ($PSCmdlet.ShouldProcess($_.SystemName, 'Remove-IdentityUser')) {
+                $userNames += [string]$_.SystemName
+                $userList += [string]$_.InternalName
             }
             else {
-                Write-LogMessage -type Warning -MSG "Skipping removal of Identity User `"$user`" due to confimation being denied"
+                Write-LogMessage -type Warning -MSG "Skipping removal of Identity User `"$User`" due to confirmation being denied"
             }
         }
     }
+
     end {
-        Try {
-            IF (0 -eq $userList.count) {
+        try {
+            if ($userList.Count -eq 0) {
                 Write-LogMessage -type Warning -MSG 'No accounts found to delete'
-                Return
+                return
             }
-            $UserJson = [pscustomobject]@{Users = $userList }
-            $result = Invoke-Rest -Uri "$IdentityURL/UserMgmt/RemoveUsers" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body $($UserJson | ConvertTo-Json -Depth 99)
-            If ([bool]$result.success) {
-                If (0 -ne $result.Result.Exceptions.User.count) {
+
+            $UserJson = [pscustomobject]@{ Users = $userList }
+            $result = Invoke-Rest -Uri "$IdentityURL/UserMgmt/RemoveUsers" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($UserJson | ConvertTo-Json -Depth 99)
+
+            if ($result.success) {
+                if ($result.Result.Exceptions.User.Count -ne 0) {
                     Write-LogMessage -type Error -MSG 'Users failed to remove, no logs given'
                 }
                 else {
-                    Write-LogMessage -type Info -MSG "The following Users removed succesfully:`n$usernames"
+                    Write-LogMessage -type Info -MSG "The following Users removed successfully:`n$userNames"
                 }
             }
         }
         catch {
-            Write-LogMessage -type Error -MSG "Error removing users:`n$PSitem"
+            Write-LogMessage -type Error -MSG "Error removing users:`n$_"
         }
     }
 }

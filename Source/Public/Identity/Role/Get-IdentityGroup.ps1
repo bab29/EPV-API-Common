@@ -1,25 +1,40 @@
 <#
-.Synopsis
-    Short description
+.SYNOPSIS
+Retrieves identity group information from a specified identity URL.
+
 .DESCRIPTION
-    Long description
+The Get-IdentityGroup function retrieves information about identity groups from a specified identity URL.
+It supports retrieving all groups or a specific group by name. The function can also return only the ID of the group if specified.
+
+.PARAMETER IdentityURL
+The URL of the identity service to query.
+
+.PARAMETER LogonToken
+The logon token used for authentication with the identity service.
+
+.PARAMETER GroupName
+The name of the group to retrieve information for. This parameter is mandatory when using the "GroupName" parameter set.
+
+.PARAMETER IDOnly
+A switch to specify if only the ID of the group should be returned.
+
+.PARAMETER AllGroups
+A switch to specify if all groups should be retrieved. This parameter is mandatory when using the "AllGroups" parameter set.
+
 .EXAMPLE
-    Example of how to use this cmdlet
+Get-IdentityGroup -IdentityURL "https://identity.example.com" -LogonToken $token -GroupName "Admins"
+
+This example retrieves information about the "Admins" group from the specified identity URL.
+
 .EXAMPLE
-    Another example of how to use this cmdlet
-.INPUTS
-    Inputs to this cmdlet (if any)
-.OUTPUTS
-    Output from this cmdlet (if any)
+Get-IdentityGroup -IdentityURL "https://identity.example.com" -LogonToken $token -AllGroups
+
+This example retrieves information about all groups from the specified identity URL.
+
 .NOTES
-    General notes
-.COMPONENT
-    The component this cmdlet belongs to
-.Group
-    The Group this cmdlet belongs to
-.FUNCTIONALITY
-    The functionality that best describes this cmdlet
+The function uses Invoke-RestMethod to query the identity service and requires appropriate permissions to access the service.
 #>
+
 function Get-IdentityGroup {
     [CmdletBinding(DefaultParameterSetName = "GroupName")]
     param (
@@ -43,73 +58,89 @@ function Get-IdentityGroup {
         $AllGroups
     )
     Begin {
-        $PSBoundParameters.Remove("CatchAll")  | Out-Null
+        $PSBoundParameters.Remove("CatchAll") | Out-Null
     }
-    process {
+    Process {
         if ($AllGroups) {
-
-            [PSCustomObject]$query = @{
-                script = "Select * from DSGroups"
-            }
-
-            $result = Invoke-RestMethod -Uri "$IdentityURL/Redrock/Query" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($query | ConvertTo-Json -Depth 99)
-            Return $result.result.results.Row
-        }
-
-        Write-LogMessage -type Verbose -MSG "Attempting to locate Identity Group named `"$GroupName`""
-        $Group = $GroupName
-        $Groups = [PSCustomObject]@{
-            '_or' = [PSCustomObject]@{
-                'DisplayName' = [PSCustomObject]@{
-                    '_like' = $Group
-                }
-            },
-            [PSCustomObject]@{
-                'SystemName' = [PSCustomObject]@{
-                    '_like' = [PSCustomObject]@{
-                        value      = $Group
-                        ignoreCase = 'true'
+            Write-LogMessage -type Verbose -Message "Attempting to locate all groups"
+            $Groups = [PSCustomObject]@{
+                '_or' = [PSCustomObject]@{
+                    'DisplayName' = [PSCustomObject]@{
+                        '_like' = ""
+                    }
+                },
+                [PSCustomObject]@{
+                    'SystemName' = [PSCustomObject]@{
+                        '_like' = [PSCustomObject]@{
+                            value      = ""
+                            ignoreCase = 'true'
+                        }
                     }
                 }
             }
         }
-        $Groupquery = [PSCustomObject]@{
-            'group' = "$($Groups|ConvertTo-Json -Depth 99 -Compress)"
+        else {
+            Write-LogMessage -type Verbose -Message "Attempting to locate Identity Group named `"$GroupName`""
+            $Group = $GroupName.Trim()
+            $Groups = [PSCustomObject]@{
+                '_or' = [PSCustomObject]@{
+                    'DisplayName' = [PSCustomObject]@{
+                        '_like' = $Group
+                    }
+                },
+                [PSCustomObject]@{
+                    'SystemName' = [PSCustomObject]@{
+                        '_like' = [PSCustomObject]@{
+                            value      = $Group
+                            ignoreCase = 'true'
+                        }
+                    }
+                }
+            }
+        }
+
+        $GroupQuery = [PSCustomObject]@{
+            'group' = "$($Groups | ConvertTo-Json -Depth 99 -Compress)"
             'Args'  = [PSCustomObject]@{
-                'PageNumber' = 1;
-                'PageSize'   = 100000;
-                'Limit'      = 100000;
-                'SortBy'     = '';
+                'PageNumber' = 1
+                'PageSize'   = 100000
+                'Limit'      = 100000
+                'SortBy'     = ''
                 'Caching'    = -1
             }
         }
-        Write-LogMessage -type Verbose -MSG "Gathering Directories"
-        $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
-        If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
-            Write-LogMessage -type Verbose -MSG "Located $($dirResult.result.Count) Directories"
-            Write-LogMessage   -type Verbose -MSG "Directory results: $($dirResult.result.Results.Row| ConvertTo-Json -Depth 99)"
-            [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.Service -eq 'ADProxy' }).directoryServiceUuid
-            $Groupquery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force
+
+        Write-LogMessage -type Verbose -Message "Gathering Directories"
+        $DirResult = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $LogonToken -ContentType 'application/json'
+
+        if ($DirResult.Success -and $DirResult.result.Count -ne 0) {
+            Write-LogMessage -type Verbose -Message "Located $($DirResult.result.Count) Directories"
+            Write-LogMessage -type Verbose -Message "Directory results: $($DirResult.result.Results.Row | ConvertTo-Json -Depth 99)"
+            [string[]]$DirID = $DirResult.result.Results.Row | Where-Object { $_.Service -eq 'ADProxy' } | Select-Object -ExpandProperty directoryServiceUuid
+            $GroupQuery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force
         }
-        Write-LogMessage -type Verbose -MSG "Body set to : `"$($Groupquery|ConvertTo-Json -Depth 99)`""
-        $result = Invoke-RestMethod -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($Groupquery | ConvertTo-Json -Depth 99)
-        Write-LogMessage -type Verbose -MSG "Result set to : `"$($result|ConvertTo-Json -Depth 99)`""
-        IF (!$result.Success) {
-            Write-LogMessage -type Error -MSG $result.Message
-            Return
+
+        Write-LogMessage -type Verbose -Message "Body set to : `"$($GroupQuery | ConvertTo-Json -Depth 99)`""
+        $Result = Invoke-RestMethod -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($GroupQuery | ConvertTo-Json -Depth 99)
+        Write-LogMessage -type Verbose -Message "Result set to : `"$($Result | ConvertTo-Json -Depth 99)`""
+
+        if (!$Result.Success) {
+            Write-LogMessage -type Error -Message $Result.Message
+            return
         }
-        IF (0 -eq $result.Result.Groups.Results.FullCount) {
-            Write-LogMessage -type Warning -MSG 'No Group found'
-            Return
+
+        if ($Result.Result.Groups.Results.FullCount -eq 0) {
+            Write-LogMessage -type Warning -Message 'No Group found'
+            return
         }
-        Else {
-            If ($IDOnly) {
-                Write-LogMessage -type Verbose -MSG "Returning ID of Group `"$Groupname`""
-                Return $result.Result.Group.Results.row.InternalName
+        else {
+            if ($IDOnly) {
+                Write-LogMessage -type Verbose -Message "Returning ID of Group `"$GroupName`""
+                return $Result.Result.Group.Results.row.InternalName
             }
             else {
-                Write-LogMessage -type Verbose -MSG "Returning all informatin about Group `"$Groupname`""
-                Return $result.Result.Group.Results.row
+                Write-LogMessage -type Verbose -Message "Returning all information about Group `"$GroupName`""
+                return $Result.Result.Group.Results.row
             }
         }
     }

@@ -1,25 +1,47 @@
-    <#
-.Synopsis
-    Short description
+<#
+.SYNOPSIS
+Removes a specified role from one or more users.
+
 .DESCRIPTION
-    Long description
-.EXAMPLE
-    Example of how to use this cmdlet
-.EXAMPLE
-    Another example of how to use this cmdlet
+The Remove-IdentityRoleFromUser function removes a specified role from one or more users in an identity management system.
+It supports pipeline input and can be forced to bypass confirmation prompts.
+
+.PARAMETER roleName
+The name of the role to be removed from the users.
+
+.PARAMETER IdentityURL
+The URL of the identity management system.
+
+.PARAMETER LogonToken
+The authentication token required to log on to the identity management system.
+
+.PARAMETER User
+An array of users from whom the role will be removed.
+
+.PARAMETER Force
+A switch to bypass confirmation prompts.
+
 .INPUTS
-    Inputs to this cmdlet (if any)
+System.String
+System.String[]
+
 .OUTPUTS
-    Output from this cmdlet (if any)
+None
+
+.EXAMPLE
+PS> Remove-IdentityRoleFromUser -roleName "Admin" -IdentityURL "https://identity.example.com" -LogonToken $token -User "user1"
+
+Removes the "Admin" role from "user1".
+
+.EXAMPLE
+PS> "user1", "user2" | Remove-IdentityRoleFromUser -roleName "Admin" -IdentityURL "https://identity.example.com" -LogonToken $token
+
+Removes the "Admin" role from "user1" and "user2".
+
 .NOTES
-    General notes
-.COMPONENT
-    The component this cmdlet belongs to
-.ROLE
-    The role this cmdlet belongs to
-.FUNCTIONALITY
-    The functionality that best describes this cmdlet
+This function requires the Write-LogMessage and Get-IdentityRole functions to be defined in the session.
 #>
+
 function Remove-IdentityRoleFromUser {
     [CmdletBinding(
         SupportsShouldProcess,
@@ -46,59 +68,57 @@ function Remove-IdentityRoleFromUser {
         $User
     )
     begin {
-        $PSBoundParameters.Remove("CatchAll")  | Out-Null
+        $PSBoundParameters.Remove("CatchAll") | Out-Null
         if ($Force -and -not $Confirm) {
             Write-LogMessage -type Warning -MSG 'Confirmation prompt suppressed, proceeding with all removals'
             $ConfirmPreference = 'None'
         }
         Write-LogMessage -type Verbose -MSG "Starting removal of users from role named `"$roleName`""
-        if ($Force -and -not $Confirm) {
-            Write-LogMessage -type Warning -MSG 'Confirmation prompt suppressed, proceeding with all removals'
-            $ConfirmPreference = 'None'
-        }
         $rolesResult = Get-IdentityRole @PSBoundParameters -IDOnly
-        IF (0 -eq $rolesResult.count) {
+        if ($rolesResult.Count -eq 0) {
             Write-LogMessage -type Error -MSG 'No roles Found'
-            Return
+            return
         }
-        elseif (2 -le $rolesResult.Count) {
-            Write-LogMessage -type Error -MSG 'Multiple roles found, please enter a uqniue role name and try again'
-            Return
+        elseif ($rolesResult.Count -ge 2) {
+            Write-LogMessage -type Error -MSG 'Multiple roles found, please enter a unique role name and try again'
+            return
         }
     }
     process {
-        if ($PSCmdlet.ShouldProcess($user, "Remove-IdentityRoleFromUser $roleName")) {
-            $addUserToRole = [PSCustomObject]@{
-                Users = [PSCustomObject]@{
-                    Delete = $User
+        foreach ($user in $User) {
+            if ($PSCmdlet.ShouldProcess($user, "Remove-IdentityRoleFromUser $roleName")) {
+                $removeUserFromRole = [PSCustomObject]@{
+                    Users = [PSCustomObject]@{
+                        Delete = $User
+                    }
+                    Name  = $($rolesResult)
                 }
-                Name  = $($rolesResult)
-            }
-            Try {
-                $result = Invoke-RestMethod -Uri "$IdentityURL/Roles/UpdateRole" -Method POST -Headers $header -ContentType 'application/json' -Body $($addUserToRole | ConvertTo-Json -Depth 99)
-                If ([bool]$result.success) {
-                    If (1 -eq $user.Count) {
-                        Write-LogMessage -type Info -MSG "Role `"$roleName`" removed from user `"$user`""
+                try {
+                    $result = Invoke-RestMethod -Uri "$IdentityURL/Roles/UpdateRole" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($removeUserFromRole | ConvertTo-Json -Depth 99)
+                    if ($result.success) {
+                        if ($User.Count -eq 1) {
+                            Write-LogMessage -type Info -MSG "Role `"$roleName`" removed from user `"$user`""
+                        }
+                        else {
+                            Write-LogMessage -type Info -MSG "Role `"$roleName`" removed from all users"
+                        }
                     }
-                    Else {
-                        Write-LogMessage -type Info -MSG "Role `"$roleName`" removed from all users"
+                    else {
+                        if ($User.Count -eq 1) {
+                            Write-LogMessage -type Error -MSG "Error removing `"$roleName`" from user `"$user`": $($result.Message)"
+                        }
+                        else {
+                            Write-LogMessage -type Error -MSG "Error removing `"$roleName`" from users: $($result.Message)"
+                        }
                     }
                 }
-                else {
-                    If (1 -eq $user.Count) {
-                        Write-LogMessage -type Error -MSG "Error removing `"$roleName`" from user `"$user`": $($response.Message)"
-                    }
-                    Else {
-                        Write-LogMessage -type Error -MSG "Error removing `"$roleName`" from users: $($response.Message)"
-                    }
+                catch {
+                    Write-LogMessage -type Error -MSG "Error while trying to remove users from `"$roleName`": $_"
                 }
             }
-            Catch {
-                Write-LogMessage -type Error -MSG "Error while trying to remove users from `"$roleName`" : $PSItem "
+            else {
+                Write-LogMessage -type Warning -MSG "Skipping removal of user $user from role `"$roleName`" due to confirmation being denied"
             }
-        }
-        else {
-            Write-LogMessage -type Warning -MSG "Skipping removal of user $user from role  `"$roleName`" due to confimation being denied"
         }
     }
 }

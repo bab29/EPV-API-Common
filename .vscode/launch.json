@@ -8,16 +8,16 @@
             "name": "PowerShell Launch CheatSheet File - Install",
             "type": "PowerShell",
             "request": "launch",
-            "script": "C:\\GIT\\EPV-API-Common\\Local\\CheatSheet.ps1",
-            "cwd": "C:\\GIT\\EPV-API-Common",
+            "script": "G:\\EPV-API-Common\\Local\\CheatSheet.ps1",
+            "cwd": "G:\\EPV-API-Common",
             "preLaunchTask": "InstallPackage"
         },
         {
             "name": "PowerShell Launch CheatSheet File - Build",
             "type": "PowerShell",
             "request": "launch",
-            "script": "C:\\GIT\\EPV-API-Common\\Local\\CheatSheet.ps1",
-            "cwd": "C:\\GIT\\EPV-API-Common",
+            "script": "G:\\EPV-API-Common\\Local\\CheatSheet.ps1",
+            "cwd": "G:\\EPV-API-Common",
             "preLaunchTask": "BuildModule"
         },
         {

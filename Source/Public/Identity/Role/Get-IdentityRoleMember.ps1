@@ -1,24 +1,24 @@
 <#
-.Synopsis
-    Short description
+.SYNOPSIS
+Retrieves members of a specified identity role.
+
 .DESCRIPTION
-    Long description
+The Get-IdentityRoleMember function sends a POST request to the specified Identity URL to retrieve members of a role identified by its UUID. The function requires a logon token for authentication.
+
+.PARAMETER IdentityURL
+The base URL of the identity service.
+
+.PARAMETER LogonToken
+The authentication token required to access the identity service.
+
+.PARAMETER UUID
+The unique identifier of the role whose members are to be retrieved.
+
 .EXAMPLE
-    Example of how to use this cmdlet
-.EXAMPLE
-    Another example of how to use this cmdlet
-.INPUTS
-    Inputs to this cmdlet (if any)
-.OUTPUTS
-    Output from this cmdlet (if any)
+PS> Get-IdentityRoleMember -IdentityURL "https://identity.example.com" -LogonToken $token -UUID "12345"
+
 .NOTES
-    General notes
-.COMPONENT
-    The component this cmdlet belongs to
-.ROLE
-    The role this cmdlet belongs to
-.FUNCTIONALITY
-    The functionality that best describes this cmdlet
+The function removes any additional parameters passed to it using the CatchAll parameter.
 #>
 function Get-IdentityRoleMember {
     [CmdletBinding()]

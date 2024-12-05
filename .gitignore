@@ -7,3 +7,4 @@
 !.gitignore
 Source/EPV-API-Common.psd1
 Source/build.psd1
+Source/Public/Identity/Authentication/IgnoreMe.psm1
