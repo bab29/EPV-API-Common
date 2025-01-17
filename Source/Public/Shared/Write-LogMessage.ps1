@@ -28,7 +28,7 @@
     'LogOnly', and 'ErrorThrow'. The default value is 'Info'.
 
 .PARAMETER LogFile
-    The log file to write to. If not provided and WriteLog is $true, a temporary log file named 'Log.Log' will be created.
+    The log file to write to. if not provided and WriteLog is $true, a temporary log file named 'Log.Log' will be created.
 
 .EXAMPLE
     Write-LogMessage -MSG "This is an info message" -type Info
@@ -48,88 +48,87 @@
 .NOTES
     The function masks sensitive information like passwords in the messages to prevent accidental exposure.
 #>
-
 Function Write-LogMessage {
-    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Scope = "Function" , Justification = 'Want to go to console and allow for colors')]
+    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidGlobalVars', '', Scope = "Function" , Justification = 'In TODO list to remove')]
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [Parameter(Mandatory = $true)]
         [AllowEmptyString()]
         [String]$MSG,
-
         [Parameter(Mandatory = $false)]
         [Switch]$Header,
-
         [Parameter(Mandatory = $false)]
         [Switch]$SubHeader,
-
         [Parameter(Mandatory = $false)]
         [Switch]$Footer,
-
         [Parameter(Mandatory = $false)]
         [Bool]$WriteLog = $true,
-
         [Parameter(Mandatory = $false)]
         [ValidateSet('Info', 'Warning', 'Error', 'Debug', 'Verbose', 'Success', 'LogOnly', 'ErrorThrow')]
         [String]$type = 'Info',
-
         [Parameter(Mandatory = $false)]
-        [String]$LogFile
+        [String]$LogFile,
+        [Parameter(Mandatory = $false)]
+        [int]$pad = 20
     )
 
     begin {
         Get-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
     }
-
     process {
-        Try {
+        try {
             if ([string]::IsNullOrEmpty($LogFile) -and $WriteLog) {
                 $LogFile = '.\Log.Log'
             }
-
+            $verboseFile = $($LogFile.replace('.log', '_Verbose.log'))
             if ($Header -and $WriteLog) {
                 '=======================================' | Out-File -Append -FilePath $LogFile
-                Write-Host '=======================================' -ForegroundColor Magenta
+                Write-Information - '======================================='
             }
-            elseif ($SubHeader -and $WriteLog) {
+            Elseif ($SubHeader -and $WriteLog) {
                 '------------------------------------' | Out-File -Append -FilePath $LogFile
-                Write-Host '------------------------------------' -ForegroundColor Magenta
+                Write-Output '------------------------------------'
             }
-
+            $LogTime = "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')]`t"
+            $msgToWrite += "$LogTime"
+            $writeToFile = $true
+            # Replace empty message with 'N/A'
             if ([string]::IsNullOrEmpty($Msg)) {
                 $Msg = 'N/A'
             }
-
-            $msgToWrite = ''
+            # Added to prevent body messages from being masked
             $Msg = $Msg.Replace('"secretType":"password"', '"secretType":"pass"')
-
-            if ($Msg -match '((?:password|credentials|secret)\s{0,}["\:=]{1,}\s{0,}["]{0,})(?=([\w`~!@#$%^&*()-_\=\+\\\/|;:\.,\[\]{}]+))') {
+            # Mask Passwords
+            if ($Msg -match '((?:"password"|"secret"|"NewCredentials")\s{0,}["\:=]{1,}\s{0,}["]{0,})(?=([\w!@#$%^&*()-\\\/]+))') {
                 $Msg = $Msg.Replace($Matches[2], '****')
             }
-
-            $Msg = $Msg.Replace('"secretType":"pass"', '"secretType":"password"')
-
+            # Check the message type
             switch ($type) {
-                { ($PSItem -eq 'Info') -or ($PSItem -eq 'LogOnly') } {
-                    if ($PSItem -eq 'Info') {
-                        Write-Host $MSG.ToString() -ForegroundColor $(if ($Header -or $SubHeader) { 'Magenta' } else { 'Gray' })
-                    }
-                    $msgToWrite = "[INFO]`t`t`t$Msg"
+                'LogOnly' {
+                    $msgToWrite = ''
+                    $msgToWrite += "[INFO]`t`t$Msg"
                     break
                 }
-                'Success' {
-                    Write-Host $MSG.ToString() -ForegroundColor Green
-                    $msgToWrite = "[SUCCESS]`t`t$Msg"
+                'Info' {
+                    $msgToWrite = ''
+                    Write-Output $MSG.ToString()
+                    $msgToWrite += "[INFO]`t`t$Msg"
                     break
                 }
                 'Warning' {
-                    Write-Host $MSG.ToString() -ForegroundColor Yellow
-                    $msgToWrite = "[WARNING]`t$Msg"
+                    Write-Warning $MSG.ToString()
+                    $msgToWrite += "[WARNING]`t$Msg"
+                    if ($UseVerboseFile) {
+                        $msgToWrite | Out-File -Append -FilePath $verboseFile
+                    }
                     break
                 }
                 'Error' {
-                    Write-Host $MSG.ToString() -ForegroundColor Red
-                    $msgToWrite = "[ERROR]`t`t$Msg"
+                    Write-Error $MSG.ToString()
+                    $msgToWrite += "[ERROR]`t$Msg"
+                    if ($UseVerboseFile) {
+                        $msgToWrite | Out-File -Append -FilePath $verboseFile
+                    }
                     break
                 }
                 'ErrorThrow' {
@@ -137,31 +136,94 @@ Function Write-LogMessage {
                     break
                 }
                 'Debug' {
-                    if ($DebugPreference -ne 'SilentlyContinue' -or $VerbosePreference -ne 'SilentlyContinue') {
-                        Write-Debug -Message $MSG
-                        $msgToWrite = "[Debug]`t`t`t$Msg"
+                    if ($DebugPreference -ne 'SilentlyContinue' -or $VerbosePreference -ne 'SilentlyContinue' -or $UseVerboseFile) {
+                        $msgToWrite += "[DEBUG]`t$Msg"
                     }
-                    break
+                    else {
+                        $writeToFile = $False
+                        break
+                    }
+                    if ($DebugPreference -ne 'SilentlyContinue' -or $VerbosePreference -ne 'SilentlyContinue') {
+                        Write-Debug $MSG
+                    }
+                    if ($UseVerboseFile) {
+                        $msgToWrite | Out-File -Append -FilePath $verboseFile
+                    }
                 }
                 'Verbose' {
-                    if ($VerbosePreference -ne 'SilentlyContinue') {
-                        Write-Verbose -Message $MSG
-                        $msgToWrite = "[VERBOSE]`t`t$Msg"
+                    if ($VerbosePreference -ne 'SilentlyContinue' -or $UseVerboseFile) {
+                        $arrMsg = $msg.split(":`t", 2)
+                        if ($arrMsg.Count -gt 1) {
+                            $msg = $arrMsg[0].PadRight($pad) + $arrMsg[1]
+                        }
+                        $msgToWrite += "[VERBOSE]`t$Msg"
+                        #TODO Need to decide where to put IncludeCallStack
+                        if ($global:IncludeCallStack) {
+                            function Get-CallStack {
+                                $stack = ''
+                                $excludeItems = @('Write-LogMessage', 'Get-CallStack', '<ScriptBlock>')
+                                Get-PSCallStack | ForEach-Object {
+                                    if ($PSItem.Command -notin $excludeItems) {
+                                        $command = $PSitem.Command
+                                        #TODO Rewrite to get the script name from the script itself
+                                        if ($command -eq $Global:scriptName) {
+                                            $command = 'Base'
+                                        }
+                                        elseif ([string]::IsNullOrEmpty($command)) {
+                                            $command = '**Blank**'
+                                        }
+                                        $Location = $PSItem.Location
+                                        $stack = $stack + "$command $Location; "
+                                    }
+                                }
+                                return $stack
+                            }
+                            $stack = Get-CallStack
+                            $stackMsg = "CallStack:`t$stack"
+                            $arrstackMsg = $stackMsg.split(":`t", 2)
+                            if ($arrMsg.Count -gt 1) {
+                                $stackMsg = $arrstackMsg[0].PadRight($pad) + $arrstackMsg[1].trim()
+                            }
+                            Write-Verbose $stackMsg
+                            $msgToWrite += "`n$LogTime"
+                            $msgToWrite += "[STACK]`t`t$stackMsg"
+                        }
+                        if ($VerbosePreference -ne 'SilentlyContinue') {
+                            Write-Verbose $MSG
+                            $writeToFile = $true
+                        }
+                        else {
+                            $writeToFile = $False
+                        }
+                        if ($UseVerboseFile) {
+                            $msgToWrite | Out-File -Append -FilePath $verboseFile
+                        }
                     }
+                    else {
+                        $writeToFile = $False
+                    }
+                }
+                'Success' {
+                    Write-Output $MSG.ToString()
+                    $msgToWrite += "[SUCCESS]`t$Msg"
                     break
                 }
             }
-
-            if ($WriteLog -and $msgToWrite) {
-                "[$(Get-Date -Format 'yyyy-MM-dd hh:mm:ss')]`t$msgToWrite" | Out-File -Append -FilePath $LogFile
+            if ($writeToFile) {
+                $msgToWrite | Out-File -Append -FilePath $LogFile
             }
-
-            if ($Footer -and $WriteLog) {
+            if ($Footer) {
                 '=======================================' | Out-File -Append -FilePath $LogFile
-                Write-Host '=======================================' -ForegroundColor Magenta
+                Write-Output '======================================='
+            }
+            If ($type -eq 'ErrorThrow') {
+                Throw $MSG
             }
         }
         catch {
+            IF ($type -eq 'ErrorThrow') {
+                Throw $MSG
+            }
             Throw $(New-Object System.Exception ('Cannot write message'), $PSItem.Exception)
         }
     }

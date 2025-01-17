@@ -84,89 +84,92 @@ Function Invoke-Rest {
                 $restResponse = Invoke-RestMethod -Uri $URI -Method $Command -Body $Body -Header $Header -ContentType $ContentType -TimeoutSec 2700 -ErrorAction $ErrAction
             }
         }
-        catch [System.Net.WebException], [Microsoft.PowerShell.Commands.HttpResponseException] {
-            $errorDetails = $PSItem.ErrorDetails.Message | ConvertFrom-Json
+        catch [System.Net.WebException] {
+            Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tCaught WebException"
             if ($ErrAction -match ('\bContinue\b|\bInquire\b|\bStop\b|\bSuspend\b')) {
-                Write-LogMessage -type Error -MSG "Command: $Command`tURI:  $URI"
-                If (-not [string]::IsNullOrEmpty($Body)) {
-                    Write-LogMessage -type Verbose -MSG "Body:  $Body"
-                }
-                if (-not [string]::IsNullOrEmpty($errorDetails.ErrorCode)) {
-                    if ($errorDetails.ErrorCode -eq 'ITATS127E') {
-                        Write-LogMessage -type Error -MSG 'Was able to connect to the PVWA successfully, but the account was locked'
-                        Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
-                        Throw [System.Management.Automation.RuntimeException] 'Account Locked'
-                    }
-                    elseif (!($errorDetails.ErrorCode -in $global:SkipErrorCode)) {
-                        Write-LogMessage -type Error -MSG 'Was able to connect to the PVWA successfully, but the command resulted in an error'
-                        Write-LogMessage -type Error -MSG "Returned ErrorCode: $($errorDetails.ErrorCode)"
-                        Write-LogMessage -type Error -MSG "Returned ErrorMessage: $($errorDetails.ErrorMessage)"
-                        Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
-                        Throw $PSItem
-                    }
-                }
-                else {
-                    Write-LogMessage -type Error -MSG "Exception Message: $($PSItem.Exception.Message)"
-                    Write-LogMessage -type Error -MSG "Error Message: $PSItem"
-                    Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
+                Write-LogMessage -type Error -MSG "Error Message: $PSItem"
+                Write-LogMessage -type Error -MSG "Exception Message: $($PSItem.Exception.Message)"
+                Write-LogMessage -type Error -MSG "Status Code: $($PSItem.Exception.Response.StatusCode.value__)"
+                Write-LogMessage -type Error -MSG "Status Description: $($PSItem.Exception.Response.StatusDescription)"
+                $restResponse = $null
+                Throw
+                Else {
                     Throw $PSItem
                 }
             }
-            elseif ($ErrAction -eq 'silentlyContinue') {
-                Write-LogMessage -type Verbose -MSG "Command: $Command`tURI:  $URI"
-                If (-not [string]::IsNullOrEmpty($Body)) {
-                    Write-LogMessage -type Verbose -MSG "Body:  $Body"
-                }
-                IF ([string]::IsNullOrEmpty($errorDetails)) {
-                    Write-LogMessage -type Verbose -MSG "Exception: $PSItem"
-                    Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
-                    Throw $PSItem
-                }
-                else {
-                    Write-LogMessage -type Verbose -MSG "URI:  $URI"
-                    Write-LogMessage -type Verbose -MSG "Command:  $Command"
-                    If (-not [string]::IsNullOrEmpty($Body)) {
-                        Write-LogMessage -type Verbose -MSG "Body:  $Body"
-                    }
-                    Write-LogMessage -type Verbose -MSG "Error ErrorCode: $($errorDetails.ErrorCode)"
-                    Write-LogMessage -type Verbose -MSG "Error ErrorMessage: $($errorDetails.ErrorMessage)"
-                    Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
-                    Throw $PSItem
-                }
+        }
+        catch [Microsoft.PowerShell.Commands.HttpResponseException] {
+            Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tCaught HttpResponseException"
+            Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tCommand:`t$Command`tURI:  $URI"
+            If (-not [string]::IsNullOrEmpty($Body)) {
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tBody:`t $Body"
             }
-            $restResponse = $null
+            $Details = ($PSItem.ErrorDetails.Message | ConvertFrom-Json)
+            If ('SFWS0007' -eq $Details.ErrorCode) {
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`t$($Details.ErrorMessage)"
+                Throw $PSItem
+            }
+            elseif ('ITATS127E' -eq $Details.ErrorCode) {
+                Write-LogMessage -type Error -MSG 'Was able to connect to the PVWA successfully, but the account was locked'
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`t$($Details.ErrorMessage)"
+                Throw [System.Management.Automation.RuntimeException] 'Account Locked'
+            }
+            elseif ('PASWS013E' -eq $Details.ErrorCode) {
+                Write-LogMessage -type Error -MSG "$($Details.ErrorMessage)" -Header -Footer
+                exit 5
+            }
+            elseif ('SFWS0002' -eq $Details.ErrorCode) {
+                Write-LogMessage -type Warning -MSG "$($Details.ErrorMessage)"
+                Throw "$($Details.ErrorMessage)"
+            }
+            If ('SFWS0012' -eq $Details.ErrorCode) {
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`t$($Details.ErrorMessage)"
+                Throw $PSItem
+            }
+            elseif (!($errorDetails.ErrorCode -in $global:SkipErrorCode)) {
+                Write-LogMessage -type Error -MSG 'Was able to connect to the PVWA successfully, but the command resulted in an error'
+                Write-LogMessage -type Error -MSG "Returned ErrorCode: $($errorDetails.ErrorCode)"
+                Write-LogMessage -type Error -MSG "Returned ErrorMessage: $($errorDetails.ErrorMessage)"
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tExiting Invoke-Rest"
+                Throw $PSItem
+            }
+            Else {
+                Write-LogMessage -type Error -MSG "Error in running '$Command' on '$URI', $($PSItem.Exception)"
+                Throw $(New-Object System.Exception ("Invoke-Rest: Error in running $Command on '$URI'", $PSItem.Exception))
+            }
         }
         catch {
+            Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tCaught Exception"
             If ($ErrAction -ne "SilentlyContinue") {
-                Write-LogMessage -type Error -MSG "`tError Message: $PSItem"
+                Write-LogMessage -type Error -MSG "Error in running $Command on '$URI', $PSItem.Exception"
+                Write-LogMessage -type Error -MSG "Error Message: $PSItem"
             }
             else {
-                Write-LogMessage -type Verbose -MSG "`tError Message: $PSItem"
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tError in running $Command on '$URI', $PSItem.Exception"
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tError Message: $PSItem"
             }
-            Write-LogMessage -type Verbose $PSItem
-            Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
-            Throw $PSItem
+            Throw $(New-Object System.Exception ("Error in running $Command on '$URI'", $PSItem.Exception))
         }
 
         if ($URI -match 'Password/Retrieve') {
-            Write-LogMessage -type Verbose -MSG 'Invoke-REST Response: ***********'
+            Write-LogMessage -type Verbose -MSG 'Invoke-Rest:`tInvoke-REST Response: ***********'
         }
         else {
             if ($global:SuperVerbose) {
-                Write-LogMessage -type Verbose -MSG "Invoke-REST Response Type: $($restResponse.GetType().Name)"
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tInvoke-REST Response Type: $($restResponse.GetType().Name)"
                 $type = $restResponse.GetType().Name
                 if ('String' -ne $type) {
-                    Write-LogMessage -type Verbose -MSG "Invoke-REST ConvertTo-Json Response: $($restResponse | ConvertTo-Json -Depth 9 -Compress)"
+                    Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tInvoke-REST ConvertTo-Json Response: $($restResponse | ConvertTo-Json -Depth 9 -Compress)"
                 }
                 else {
-                    Write-LogMessage -type Verbose -MSG "Invoke-REST Response: $restResponse"
+                    Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tInvoke-REST Response: $restResponse"
                 }
             }
             else {
-                Write-LogMessage -type Verbose -MSG "Invoke-REST Response: $restResponse"
+                Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tInvoke-REST Response: $restResponse"
             }
         }
-        Write-LogMessage -type Verbose -MSG 'Exiting Invoke-Rest'
+        Write-LogMessage -type Verbose -MSG "Invoke-Rest:`tExiting Invoke-Rest"
         return $restResponse
     }
 }
