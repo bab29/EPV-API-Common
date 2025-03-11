@@ -3,6 +3,7 @@
 !*/
 !/Source/**
 !/Tests/**
+!/Output/**
 !README.md
 !.gitignore
 Source/EPV-API-Common.psd1
