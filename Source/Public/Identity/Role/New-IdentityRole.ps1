@@ -94,7 +94,7 @@ function New-IdentityRole {
         }
         if ($PSCmdlet.ShouldProcess($roleName, 'New-IdentityRole')) {
             Write-LogMessage -type Verbose -MSG "Creating role named `"$roleName`""
-            $result = Invoke-RestMethod -Uri "$IdentityURL/Roles/StoreRole" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 99)
+            $result = Invoke-Rest -Uri "$IdentityURL/Roles/StoreRole" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 99)
             if (!$result.Success) {
                 Write-LogMessage -type Error -MSG $result.Message
                 return

@@ -62,8 +62,8 @@ function Get-IdentityRole {
     Process {
         if ($AllRoles) {
             $query = [PSCustomObject]@{ script = "SELECT Role.Name, Role.ID FROM Role" }
-            $result = Invoke-RestMethod -Uri "$IdentityURL/Redrock/Query" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($query | ConvertTo-Json -Depth 99)
-            return $result.result.results.Row
+            $result = Invoke-Rest -Uri "$IdentityURL/Redrock/Query" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($query | ConvertTo-Json -Depth 99)
+            return $result.result.results.Row  |Select-Object -Property Name, ID
         }
 
         Write-LogMessage -type Verbose -MSG "Attempting to locate Identity Role named `"$roleName`""
@@ -93,16 +93,16 @@ function Get-IdentityRole {
         }
 
         Write-LogMessage -type Verbose -MSG "Gathering Directories"
-        $dirResult = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $LogonToken -ContentType 'application/json'
+        $dirResult = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $LogonToken -ContentType 'application/json'
 
         if ($dirResult.Success -and $dirResult.result.Count -ne 0) {
             Write-LogMessage -type Verbose -MSG "Located $($dirResult.result.Count) Directories"
             Write-LogMessage -type Verbose -MSG "Directory results: $($dirResult.result.Results.Row)"
-            $DirID = $dirResult.result.Results.Row | Where-Object { $_.Service -eq 'CDS' } | Select-Object -ExpandProperty directoryServiceUuid
+            [string[]]$DirID = $dirResult.result.Results.Row | Where-Object { $_.Service -eq 'CDS' } | Select-Object -ExpandProperty directoryServiceUuid
             $rolequery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force
         }
 
-        $result = Invoke-RestMethod -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($rolequery | ConvertTo-Json -Depth 99)
+        $result = Invoke-Rest -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($rolequery | ConvertTo-Json -Depth 99)
 
         if (!$result.Success) {
             Write-LogMessage -type Error -MSG $result.Message

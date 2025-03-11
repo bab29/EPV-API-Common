@@ -8,8 +8,9 @@ Class Base {
 
     hidden [void] SetValues([pscustomobject]$PSCustom) {
         $this.ClearValues()
+        $propList = $($this |Get-Member -force -MemberType Property).name
         foreach ($Property in $PSCustom.psobject.properties.name) {
-            if ($this.PSobject.Properties.name -contains $Property) {
+            if ($propList -contains $Property) {
                 $this.$Property = $PSCustom.$Property
             } else {
                 Write-Error "Property $Property with type $($Property.GetType().Name) not found in $($this.GetType().Name) "

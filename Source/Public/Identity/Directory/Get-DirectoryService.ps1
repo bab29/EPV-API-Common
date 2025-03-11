@@ -56,7 +56,7 @@ function Get-DirectoryService {
             [PSCustomObject[]]$DirID = $DirectoryServiceUuid
         } elseif ($directoryName) {
             Write-LogMessage -type Verbose -MSG "Directory name provided. Searching for directory with the name of `"$directoryName`""
-            $dirResult = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
+            $dirResult = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
             if ($dirResult.Success -and $dirResult.result.Count -ne 0) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories with the name of `"$directoryName`""
                 if ($UuidOnly) {
@@ -67,7 +67,7 @@ function Get-DirectoryService {
             }
         } elseif ($directoryService) {
             Write-LogMessage -type Verbose -MSG "Directory service provided. Searching for directory with the name of `"$directoryService`""
-            $dirResult = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
+            $dirResult = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
             if ($dirResult.Success -and $dirResult.result.Count -ne 0) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories with the service type of `"$directoryService`""
                 if ($UuidOnly) {
@@ -78,7 +78,7 @@ function Get-DirectoryService {
             }
         } else {
             Write-LogMessage -type Verbose -MSG 'No directory parameters passed. Gathering all directories, except federated'
-            $dirResult = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
+            $dirResult = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
             if ($dirResult.Success -and $dirResult.result.Count -ne 0) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories"
                 if ($UuidOnly) {

@@ -116,7 +116,6 @@ Function Invoke-Rest {
             }
             elseif ('PASWS013E' -eq $Details.ErrorCode) {
                 Write-LogMessage -type Error -MSG "$($Details.ErrorMessage)" -Header -Footer
-                exit 5
             }
             elseif ('SFWS0002' -eq $Details.ErrorCode) {
                 Write-LogMessage -type Warning -MSG "$($Details.ErrorMessage)"

@@ -71,7 +71,7 @@ Function Get-IdentityHeader {
     }
     $startPlatformAPIBody = @{User = $IdentityUserName ; Version = "1.0" } | ConvertTo-Json -Compress -Depth 9
     Write-LogMessage -type "Verbose" -MSG "URL body : $($startPlatformAPIBody|ConvertTo-Json -Depth 9)"
-    $IdaptiveResponse = Invoke-RestMethod -SessionVariable session -Uri $startPlatformAPIAuth -Method Post -ContentType "application/json" -Body $startPlatformAPIBody -TimeoutSec 30
+    $IdaptiveResponse = Invoke-Rest -SessionVariable session -Uri $startPlatformAPIAuth -Method Post -ContentType "application/json" -Body $startPlatformAPIBody -TimeoutSec 30
     Write-LogMessage -type "Verbose" -MSG "IdaptiveResponse : $($IdaptiveResponse|ConvertTo-Json -Depth 9)"
     # We can use the following to give info to the customer $IdaptiveResponse.Result.Challenges.mechanisms
     $SessionId = $($IdaptiveResponse.Result.SessionId)
@@ -204,7 +204,7 @@ Function Invoke-AdvancedAuthBody {
     }
     #Rest API
     Try {
-        $AnswerToResponse = Invoke-RestMethod -Uri $startPlatformAPIAdvancedAuth -Method Post -ContentType "application/json" -Body $startPlatformAPIAdvancedAuthBody -TimeoutSec 30
+        $AnswerToResponse = Invoke-Rest -Uri $startPlatformAPIAdvancedAuth -Method Post -ContentType "application/json" -Body $startPlatformAPIAdvancedAuthBody -TimeoutSec 30
         Write-LogMessage -type "Verbose" -MSG "AnswerToResponse: $($AnswerToResponse|ConvertTo-Json)"
     } Catch {
         Write-LogMessage -Type Error -MSG $_.ErrorDetails.Message
@@ -213,7 +213,7 @@ Function Invoke-AdvancedAuthBody {
         Start-Sleep -Seconds 2
         $pollBody = @{SessionId = $SessionId; MechanismId = $MechanismId; Action = "Poll"; } | ConvertTo-Json -Compress
         Write-LogMessage -type "Verbose" -MSG "pollBody: $($pollBody|ConvertTo-Json)"
-        $AnswerToResponse = Invoke-RestMethod -Uri $startPlatformAPIAdvancedAuth -Method Post -ContentType "application/json" -Body $pollBody -TimeoutSec 30
+        $AnswerToResponse = Invoke-Rest -Uri $startPlatformAPIAdvancedAuth -Method Post -ContentType "application/json" -Body $pollBody -TimeoutSec 30
         Write-LogMessage -type "Verbose" -MSG "AnswerToResponse: $($AnswerToResponse|ConvertTo-Json)"
         Write-LogMessage -type "Info" -MSG "$($AnswerToResponse.Result.Summary)"
     }
@@ -229,7 +229,7 @@ function Get-PCloudExternalVersion {
     )
     $ExternalVersion = "12.6.0"
     try {
-        $Response = Invoke-RestMethod -Method GET -Uri "$PCloudTenantApiUrl/WebServices/PIMServices.svc/Server" -Headers $Token -ContentType 'application/json'
+        $Response = Invoke-Rest -Method GET -Uri "$PCloudTenantApiUrl/WebServices/PIMServices.svc/Server" -Headers $Token -ContentType 'application/json'
         $ExternalVersion = $Response.ExternalVersion
     } catch {
         Write-LogMessage -Type Error -MSG $_.ErrorDetails.Message
@@ -448,7 +448,7 @@ namespace Cookies
         }
     }
 }
-function Get-OAuthCreds {
+function Getjlh-OAuthCreds {
     [CmdletBinding()]
     param (
         [pscredential]$OAuthCreds
@@ -458,7 +458,7 @@ function Get-OAuthCreds {
         "client_id"     = $($OAuthCreds.GetNetworkCredential().UserName)
         "client_secret" = $($OAuthCreds.GetNetworkCredential().Password)
     }
-    Return $($(Invoke-RestMethod "$IdaptiveBasePlatformURL/oauth2/platformtoken/" -Method 'POST' -Body $body).access_token)
+    Return $($(Invoke-Rest "$IdaptiveBasePlatformURL/oauth2/platformtoken/" -Method 'POST' -Body $body).access_token)
 }
 function Format-Token {
     [CmdletBinding()]

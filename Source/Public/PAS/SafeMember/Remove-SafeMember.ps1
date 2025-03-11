@@ -65,7 +65,7 @@ function Remove-SafeMember {
         $SafeMemberURL = "$PVWAURL/API/Safes/$SafeName/Members/$memberName/"
         if ($PSCmdlet.ShouldProcess($memberName, 'Remove-SafeMember')) {
             Write-LogMessage -type Verbose -MSG "Removing member `$memberName` from safe `$SafeName`""
-            Invoke-RestMethod -Uri $SafeMemberURL -Method DELETE -Headers $LogonToken -ContentType 'application/json'
+            Invoke-Rest -Uri $SafeMemberURL -Method DELETE -Headers $LogonToken -ContentType 'application/json'
         } else {
             Write-LogMessage -type Warning -MSG "Skipping removal of member `$memberName` from safe `$SafeName` due to confirmation being denied"
         }

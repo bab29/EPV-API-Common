@@ -159,7 +159,7 @@ function Get-Safe {
         }
         else {
             if (-not ($SafeNameExists -or $PlatformIDExists -or $SafeUrlIdExists)) {
-                Write-LogMessage -type Verbose -MSG "No Safe Name, Safe ID, or Platform ID provided, returning all safes"
+                Write-LogMessage -type Debug -MSG "No Safe Name, Safe ID, or Platform ID provided, returning all safes"
             }
             Get-SafeViaQuery
         }
@@ -168,7 +168,7 @@ function Get-Safe {
 
 function Get-SafeViaID {
     $URL = $SafeIDURL -f $SafeUrlId
-    Write-LogMessage -type Verbose -MSG "Getting safe with ID of `"$SafeUrlId`""
+    Write-LogMessage -type Debug -MSG "Getting safe with ID of `"$SafeUrlId`""
     Add-BaseQueryParameter -URL ([ref]$URL)
     $restResponse = Invoke-Rest -Uri $URL -Method GET -Headers $logonToken -ContentType 'application/json'
     return [safe]$restResponse
@@ -176,11 +176,11 @@ function Get-SafeViaID {
 
 function Get-SafeViaPlatformID {
     if ($SafeNameExists) {
-        Write-LogMessage -type Verbose -MSG "Searching for a safe with the name of `"$SafeName`" and a platformID of `"$PlatformID`""
+        Write-LogMessage -type Debug -MSG "Searching for a safe with the name of `"$SafeName`" and a platformID of `"$PlatformID`""
         $URL = $PlatformIDURL -f $PlatformID, $SafeName
     }
     else {
-        Write-LogMessage -type Verbose -MSG "Getting a list of safes available to platformID `"$PlatformID`""
+        Write-LogMessage -type Debug -MSG "Getting a list of safes available to platformID `"$PlatformID`""
         $URL = $PlatformIDURL -f $PlatformID
     }
     [PSCustomObject[]]$resultList = Invoke-RestNextLink -Uri $URL -Method GET -Headers $logonToken -ContentType 'application/json'
@@ -188,7 +188,7 @@ function Get-SafeViaPlatformID {
 }
 
 function Get-SafeViaQuery {
-    Write-LogMessage -type Verbose -MSG "Getting list of safes"
+    Write-LogMessage -type Debug -MSG "Getting list of safes"
     $URL = $SafeURL
     Add-BaseQueryParameter -URL ([ref]$URL)
     Add-SafeQueryParameter -URL ([ref]$URL)
@@ -200,18 +200,18 @@ function Add-SafeQueryParameter {
     param (
         [ref]$URL
     )
-    Write-LogMessage -type Verbose -MSG "Adding Query Parameters"
+    Write-LogMessage -type Debug -MSG "Adding Query Parameters"
     if ($includeAccounts) {
         $URL.Value += "&includeAccounts=true"
-        Write-LogMessage -type Verbose -MSG "Including accounts in results"
+        Write-LogMessage -type Debug -MSG "Including accounts in results"
     }
     if ($ExtendedDetails) {
         $URL.Value += "&extendedDetails=true"
-        Write-LogMessage -type Verbose -MSG "Including extended details"
+        Write-LogMessage -type Debug -MSG "Including extended details"
     }
     if (-not [string]::IsNullOrEmpty($Search)) {
         $URL.Value += "&search=$Search"
-        Write-LogMessage -type Verbose -MSG "Applying a search of `"$Search`""
+        Write-LogMessage -type Debug -MSG "Applying a search of `"$Search`""
     }
-    Write-LogMessage -type Verbose -MSG "New URL: $URL"
+    Write-LogMessage -type Debug -MSG "New URL: $($URL.ToString())"
 }

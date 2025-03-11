@@ -42,7 +42,7 @@ function Get-IdentityRoleInDir {
         $PSBoundParameters.Remove("CatchAll") | Out-Null
     }
     Process {
-        $result = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryRolesAndRights?path=$Directory" -Method POST -Headers $LogonToken -ContentType 'application/json'
+        $result = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryRolesAndRights?path=$Directory" -Method POST -Headers $LogonToken -ContentType 'application/json'
         return $result.result.Results.Row
     }
 }

@@ -41,7 +41,7 @@ function Get-IdentityRoleMember {
         $PSBoundParameters.Remove("CatchAll")  | Out-Null
     }
     process {
-        $result = Invoke-RestMethod -Uri "$IdentityURL/Roles/GetRoleMembers?name=$UUID" -Method POST -Headers $logonToken -ContentType 'application/json'
+        $result = Invoke-Rest -Uri "$IdentityURL/Roles/GetRoleMembers?name=$UUID" -Method POST -Headers $logonToken -ContentType 'application/json'
         If (-not [string]::IsNullOrEmpty($result.result.Results.Row)) {
             $result.result.Results.Row | Add-Member -MemberType NoteProperty -Name "RoleUUID" -Value $UUID
             Return $result.result.Results.Row

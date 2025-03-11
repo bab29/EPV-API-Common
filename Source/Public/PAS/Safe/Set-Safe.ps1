@@ -97,15 +97,15 @@ Set-Safe {
         }
 
         if ($PSCmdlet.ShouldProcess($safeName, 'Set-Safe')) {
-            Write-LogMessage -type Verbose -MSG "Updating safe `"$safeName`""
+            Write-LogMessage -type Debug -MSG "Updating safe `"$safeName`""
             Try {
                 Invoke-Rest -Command PUT -URI ($SafeURL -f $safeName) -Header $LogonToken -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 99) -ErrAction SilentlyContinue
-                Write-LogMessage -type Verbose -MSG "Updated safe `"$safeName`" successfully"
+                Write-LogMessage -type Debug -MSG "Updated safe `"$safeName`" successfully"
             }
             Catch {
                 If (($PSItem.ErrorDetails.Message |ConvertFrom-Json).ErrorCode -eq 'SFWS0007') {
                     IF ($CreateOnMissing) {
-                        Write-LogMessage -type Verbose -MSG "Safe `"$safeName`" not found, creating instead"
+                        Write-LogMessage -type Debug -MSG "Safe `"$safeName`" not found, creating instead"
                         New-Safe -PVWAURL $PVWAURL -LogonToken $LogonToken -safeName $safeName -description $description -location $location -olacEnabled:$olacEnabled -managingCPM $managingCPM -numberOfVersionsRetention $numberOfVersionsRetention -numberOfDaysRetention $numberOfDaysRetention -Confirm:$false
                     }
                     Else {

@@ -101,15 +101,15 @@ function New-Safe {
         }
 
         if ($PSCmdlet.ShouldProcess($safeName, 'New-Safe')) {
-            Write-LogMessage -type Verbose -MSG "Adding safe `"$safeName`""
+            Write-LogMessage -type Debug -MSG "Adding safe `"$safeName`""
             Try {
                 Invoke-Rest -Uri $SafeURL -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 99) -ErrAction SilentlyContinue
-                Write-LogMessage -type Verbose -MSG "Added safe `"$safeName`" successfully"
+                Write-LogMessage -type Debug -MSG "Added safe `"$safeName`" successfully"
             }
             Catch {
                 If ($($PSItem.ErrorDetails.Message |ConvertFrom-Json).ErrorCode -eq "SFWS0002") {
                     IF ($UpdateOnDuplicate) {
-                        Write-LogMessage -type Verbose -MSG "Safe `"$safeName`" does not exist, creating instead"
+                        Write-LogMessage -type Debug -MSG "Safe `"$safeName`" does not exist, creating instead"
                         $updateParams = @{
                             PVWAURL                  = $PVWAURL
                             LogonToken               = $LogonToken

@@ -80,7 +80,7 @@ function Export-SafeMember {
                     Write-LogMessage -type Verbose -MSG "The file `'$CSVPath`' was removed."
                 }
                 else {
-                    Write-LogMessage -type Verbose -MSG "The file `'$CSVPath`' already exists and the switch `"Force`" was not passed. Exit with exit code 80"
+                    Write-LogMessage -type Verbose -MSG "The file `'$CSVPath`' already exists and the switch `"Force`" was not passed."
                     Write-LogMessage -type Error -MSG "The file `'$CSVPath`' already exists."
                     Exit 80
                 }
@@ -138,7 +138,6 @@ function Export-SafeMember {
     }
     End {
         Write-LogMessage -type Info -MSG "Exported $SafeMemberCount safe members succesfully"
-        Write-LogMessage -type Verbose -MSG "Completed successfully, returning exit code 0"
-        Exit 0
+        Write-LogMessage -type Verbose -MSG "Completed successfully"
     }
 }

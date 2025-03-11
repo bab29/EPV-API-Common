@@ -32,7 +32,7 @@ Get-IdentityGroup -IdentityURL "https://identity.example.com" -LogonToken $token
 This example retrieves information about all groups from the specified identity URL.
 
 .NOTES
-The function uses Invoke-RestMethod to query the identity service and requires appropriate permissions to access the service.
+The function uses Invoke-Rest to query the identity service and requires appropriate permissions to access the service.
 #>
 
 function Get-IdentityGroup {
@@ -111,7 +111,7 @@ function Get-IdentityGroup {
         }
 
         Write-LogMessage -type Verbose -Message "Gathering Directories"
-        $DirResult = Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $LogonToken -ContentType 'application/json'
+        $DirResult = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $LogonToken -ContentType 'application/json'
 
         if ($DirResult.Success -and $DirResult.result.Count -ne 0) {
             Write-LogMessage -type Verbose -Message "Located $($DirResult.result.Count) Directories"
@@ -121,7 +121,7 @@ function Get-IdentityGroup {
         }
 
         Write-LogMessage -type Verbose -Message "Body set to : `"$($GroupQuery | ConvertTo-Json -Depth 99)`""
-        $Result = Invoke-RestMethod -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($GroupQuery | ConvertTo-Json -Depth 99)
+        $Result = Invoke-Rest -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($GroupQuery | ConvertTo-Json -Depth 99)
         Write-LogMessage -type Verbose -Message "Result set to : `"$($Result | ConvertTo-Json -Depth 99)`""
 
         if (!$Result.Success) {

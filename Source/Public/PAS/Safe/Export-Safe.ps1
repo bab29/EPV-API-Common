@@ -72,14 +72,13 @@ function Export-Safe {
         $SafeCount = 0
         if (Test-Path $CSVPath) {
             try {
-                Write-LogMessage -type Verbose -MSG "The file '$CSVPath' already exists. Checking for Force switch"
+                Write-LogMessage -type Debug -MSG "The file '$CSVPath' already exists. Checking for Force switch"
                 if ($Force) {
                     Remove-Item $CSVPath
-                    Write-LogMessage -type Verbose -MSG "The file '$CSVPath' was removed."
+                    Write-LogMessage -type Debug -MSG "The file '$CSVPath' was removed."
                 } else {
-                    Write-LogMessage -type Verbose -MSG "The file '$CSVPath' already exists and the switch 'Force' was not passed. Exit with exit code 80"
+                    Write-LogMessage -type Debug -MSG "The file '$CSVPath' already exists and the switch 'Force' was not passed."
                     Write-LogMessage -type Error -MSG "The file '$CSVPath' already exists."
-                    Exit 80
                 }
             } catch {
                 Write-LogMessage -type ErrorThrow -MSG "Error while trying to remove '$CSVPath'"
@@ -90,7 +89,7 @@ function Export-Safe {
         try {
             if (-not $includeSystemSafes) {
                 if ($safe.SafeName -in $SafesToRemove) {
-                    Write-LogMessage -type Verbose -MSG "Safe '$($Safe.SafeName)' is a system safe, skipping"
+                    Write-LogMessage -type Debug -MSG "Safe '$($Safe.SafeName)' is a system safe, skipping"
                     return
                 }
             }
@@ -104,7 +103,7 @@ function Export-Safe {
                 "Last Modified"    = ([datetime]'1/1/1970').ToLocalTime().AddMicroseconds($Safe.lastModificationTime)
             }
             if ($IncludeDetails) {
-                Write-LogMessage -type Verbose -MSG "Including Details"
+                Write-LogMessage -type Debug -MSG "Including Details"
                 $item | Add-Member -MemberType NoteProperty -Name "OLAC Enabled" -Value $safe.OLAC
                 $item | Add-Member -MemberType NoteProperty -Name "Auto Purge Enabled" -Value $safe.autoPurgeEnabled
                 $item | Add-Member -MemberType NoteProperty -Name "Safe ID" -Value $safe.safeNumber
@@ -115,10 +114,10 @@ function Export-Safe {
                 $item | Add-Member -MemberType NoteProperty -Name "Membership Expired" -Value $safe.isExpiredMember
             }
             if ($IncludeAccounts) {
-                Write-LogMessage -type Verbose -MSG "Including Accounts"
+                Write-LogMessage -type Debug -MSG "Including Accounts"
                 $item | Add-Member -MemberType NoteProperty -Name "Accounts" -Value $($Safe.accounts.Name -join ", ")
             }
-            Write-LogMessage -type Verbose -MSG "Adding safe '$($Safe.Safename)' to CSV '$CSVPath'"
+            Write-LogMessage -type Debug -MSG "Adding safe '$($Safe.Safename)' to CSV '$CSVPath'"
             $item | Export-Csv -Append $CSVPath -NoTypeInformation
             $SafeCount += 1
         } catch {
@@ -127,7 +126,6 @@ function Export-Safe {
     }
     end {
         Write-LogMessage -type Info -MSG "Exported $SafeCount safes successfully"
-        Write-LogMessage -type Verbose -MSG "Completed successfully, returning exit code 0"
-        Exit 0
+        Write-LogMessage -type Debug -MSG "Completed successfully"
     }
 }

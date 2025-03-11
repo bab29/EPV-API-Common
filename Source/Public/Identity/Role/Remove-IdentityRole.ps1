@@ -73,7 +73,7 @@ function Remove-IdentityRole {
         }
         $body = [PSCustomObject]@{ Name = $RoleID }
         if ($PSCmdlet.ShouldProcess($Role, 'Remove-IdentityRole')) {
-            $result = Invoke-RestMethod -Uri "$IdentityURL/SaasManage/DeleteRole/" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 99)
+            $result = Invoke-Rest -Uri "$IdentityURL/SaasManage/DeleteRole/" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($body | ConvertTo-Json -Depth 99)
             if (!$result.Success) {
                 Write-LogMessage -type Error -MSG $result.Message
             }

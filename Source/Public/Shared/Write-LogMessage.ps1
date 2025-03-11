@@ -54,6 +54,7 @@ Function Write-LogMessage {
     param(
         [Parameter(Mandatory = $true)]
         [AllowEmptyString()]
+        [Alias('Message')]
         [String]$MSG,
         [Parameter(Mandatory = $false)]
         [Switch]$Header,

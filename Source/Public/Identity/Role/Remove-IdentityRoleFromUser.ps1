@@ -94,7 +94,7 @@ function Remove-IdentityRoleFromUser {
                     Name  = $($rolesResult)
                 }
                 try {
-                    $result = Invoke-RestMethod -Uri "$IdentityURL/Roles/UpdateRole" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($removeUserFromRole | ConvertTo-Json -Depth 99)
+                    $result = Invoke-Rest -Uri "$IdentityURL/Roles/UpdateRole" -Method POST -Headers $LogonToken -ContentType 'application/json' -Body ($removeUserFromRole | ConvertTo-Json -Depth 99)
                     if ($result.success) {
                         if ($User.Count -eq 1) {
                             Write-LogMessage -type Info -MSG "Role `"$roleName`" removed from user `"$user`""
