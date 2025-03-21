@@ -1,6 +1,28 @@
+<#
+.Synopsis
+    Get Identity Directories
+.DESCRIPTION
+    Get Identity Directories
+.EXAMPLE
+    Example of how to use this cmdlet
+.EXAMPLE
+    Another example of how to use this cmdlet
+.INPUTS
+    Inputs to this cmdlet (if any)
+.OUTPUTS
+    Output from this cmdlet (if any)
+.NOTES
+    General notes
+.COMPONENT
+    The component this cmdlet belongs to
+.ROLE
+    The role this cmdlet belongs to
+.FUNCTIONALITY
+    The functionality that best describes this cmdlet
+#>
 function Get-DirectoryService {
     [CmdletBinding()]
-    param (      
+    param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
         [Parameter(Mandatory)]
@@ -13,7 +35,7 @@ function Get-DirectoryService {
         [switch]
         $IDOnly,
         [Parameter(ValueFromPipeline)]
-        [Alias('DirID,DirectoryUUID')]
+        [Alias('DirID', 'DirectoryUUID')]
         [String[]]
         $DirectoryServiceUuid,
         [Parameter(ValueFromPipeline)]
@@ -25,51 +47,44 @@ function Get-DirectoryService {
         [switch]
         $UuidOnly
     )
-    Begin{
-        $PSBoundParameters.Remove("CatchAll")  | Out-Nulls
+    Begin {
+        $PSBoundParameters.Remove("CatchAll") | Out-Null
     }
-
     Process {
-        IF (![string]::IsNullOrEmpty($DirectoryServiceUuid)) {
+        if ($DirectoryServiceUuid) {
             Write-LogMessage -type Verbose -MSG "Directory UUID Provided. Setting Search Directory to `"$DirectoryServiceUuid`""
-            [string[]]$DirID = $DirectoryServiceUuid
-        }
-        ElseIF (![string]::IsNullOrEmpty($directoryName)) {
+            [PSCustomObject[]]$DirID = $DirectoryServiceUuid
+        } elseif ($directoryName) {
             Write-LogMessage -type Verbose -MSG "Directory name provided. Searching for directory with the name of `"$directoryName`""
-            $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
-            If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
+            $dirResult = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
+            if ($dirResult.Success -and $dirResult.result.Count -ne 0) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories with the name of `"$directoryName`""
-                IF ($UuidOnly) {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
-                }
-                else {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
+                if ($UuidOnly) {
+                    [PSCustomObject[]]$DirID = $dirResult.result.Results.Row | Where-Object { $_.DisplayName -like "*$directoryName*" } | Select-Object -ExpandProperty directoryServiceUuid
+                } else {
+                    [PSCustomObject[]]$DirID = $dirResult.result.Results.Row | Where-Object { $_.DisplayName -like "*$directoryName*" }
                 }
             }
-        }
-        ElseIF (![string]::IsNullOrEmpty($directoryService)) {
+        } elseif ($directoryService) {
             Write-LogMessage -type Verbose -MSG "Directory service provided. Searching for directory with the name of `"$directoryService`""
-            $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
-            If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
+            $dirResult = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
+            if ($dirResult.Success -and $dirResult.result.Count -ne 0) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories with the service type of `"$directoryService`""
-                IF ($UuidOnly) {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
-                }
-                else {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
+                if ($UuidOnly) {
+                    [PSCustomObject[]]$DirID = $dirResult.result.Results.Row | Where-Object { $_.DisplayName -like "*$directoryService*" } | Select-Object -ExpandProperty directoryServiceUuid
+                } else {
+                    [PSCustomObject[]]$DirID = $dirResult.result.Results.Row | Where-Object { $_.DisplayName -like "*$directoryService*" }
                 }
             }
-        }
-        else {
-            Write-LogMessage -type Verbose -MSG 'No directory paramters passed. Gathering all directories, except federated'
-            $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
-            If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
+        } else {
+            Write-LogMessage -type Verbose -MSG 'No directory parameters passed. Gathering all directories, except federated'
+            $dirResult = Invoke-Rest -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json'
+            if ($dirResult.Success -and $dirResult.result.Count -ne 0) {
                 Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories"
-                IF ($UuidOnly) {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
-                }
-                else {
-                    [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" })
+                if ($UuidOnly) {
+                    [PSCustomObject[]]$DirID = $dirResult.result.Results.Row | Select-Object -ExpandProperty directoryServiceUuid
+                } else {
+                    [PSCustomObject[]]$DirID = $dirResult.result.Results.Row
                 }
             }
         }

@@ -1,6 +1,63 @@
+<#
+.SYNOPSIS
+Retrieves identity user information from a specified identity URL.
+
+.DESCRIPTION
+The Get-IdentityUser function retrieves user information from an identity service. It supports various parameters to filter the search, including UUID, name, display name, email, and internal name. The function can return either detailed information or just the user IDs based on the provided switches.
+
+.PARAMETER IdentityURL
+The URL of the identity service to query.
+
+.PARAMETER LogonToken
+The logon token used for authentication with the identity service.
+
+.PARAMETER IDOnly
+A switch to return only the user IDs.
+
+.PARAMETER DirectoryServiceUuid
+The UUID(s) of the directory service(s) to query.
+
+.PARAMETER directoryName
+The name of the directory to query.
+
+.PARAMETER directoryService
+The directory service to query.
+
+.PARAMETER name
+The name of the user to search for.
+
+.PARAMETER DisplayName
+The display name of the user to search for.
+
+.PARAMETER mail
+The email of the user to search for.
+
+.PARAMETER InternalName
+The internal name of the user to search for.
+
+.PARAMETER UUID
+The UUID of the user to search for.
+
+.PARAMETER AllUsers
+A switch to retrieve all users from the directory service.
+
+.PARAMETER IncludeDetails
+A switch to include detailed information about the users.
+
+.EXAMPLE
+Get-IdentityUser -IdentityURL "https://identity.example.com" -LogonToken $token -UUID "1234-5678-90ab-cdef"
+
+.EXAMPLE
+Get-IdentityUser -IdentityURL "https://identity.example.com" -LogonToken $token -name "jdoe" -IDOnly
+
+.NOTES
+Author: Your Name
+Date: Today's Date
+#>
+
 function Get-IdentityUser {
     [CmdletBinding()]
-    param (      
+    param (
         [Parameter(ValueFromRemainingArguments, DontShow)]
         $CatchAll,
         [Parameter(Mandatory)]
@@ -12,138 +69,146 @@ function Get-IdentityUser {
         $LogonToken,
         [switch]
         $IDOnly,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [Alias('DirID,DirectoryUUID')]
         [String[]]
         $DirectoryServiceUuid,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [string]
         $directoryName,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [string]
         $directoryService,
-        [Parameter(ValueFromPipeline)]
-        [Alias('user', 'username')]
-        [string]$name,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Alias('user', 'username', 'member', 'UserPrincipalName', 'SamAccountName')]
+        [string]
+        $name,
+        [Parameter(ValueFromPipelineByPropertyName)]
         [string]
         $DisplayName,
-        [Parameter(ValueFromPipeline)]
+        [Parameter(ValueFromPipelineByPropertyName)]
         [alias('email')]
         [string]
         $mail,
-        [Parameter(ValueFromPipeline)]
-        [Alias('ObjectGUID', 'GUID', 'UUID', 'UID', 'ExternalUuid')]
+        [Parameter(ValueFromPipelineByPropertyName, DontShow)]
         [string]
-        $id,
+        $InternalName,
+        [Parameter(ValueFromPipelineByPropertyName)]
+        [Alias('ObjectGUID', 'GUID', 'ID', 'UID')]
+        [string]
+        $UUID,
+        [Parameter(ParameterSetName = 'AllUsers')]
         [switch]
-        $AllUsers
-
+        $AllUsers,
+        [Parameter(ParameterSetName = 'AllUsers')]
+        [switch]
+        $IncludeDetails
     )
     begin {
-        $PSBoundParameters.Remove("CatchAll")  | Out-Null
-
+        $PSBoundParameters.Remove("CatchAll") | Out-Null
         [string[]]$DirID = Get-DirectoryService @PSBoundParameters -UuidOnly
-        <#         IF (![string]::IsNullOrEmpty($DirectoryServiceUuid)) {
-            Write-LogMessage -type Verbose -MSG "Directory UUID Provided. Setting Search Directory to `"$DirectoryServiceUuid`""
-            $DirID = $DirectoryServiceUuid
-        }
-        ElseIF (![string]::IsNullOrEmpty($directoryName)) {
-            Write-LogMessage -type Verbose -MSG "Directory name provided. Searching for directory with the name of `"$directoryName`""
-            $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
-            If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
-                Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories with the name of `"$directoryName`""
-                [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.DisplayName -like "*$directoryName*" }).directoryServiceUuid
-            }
-        }
-        ElseIF (![string]::IsNullOrEmpty($directoryService)) {
-            Write-LogMessage -type Verbose -MSG "Directory service provided. Searching for directory with the name of `"$directoryService`""
-            $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
-            If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
-                Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories with the service type of `"$directoryService`""
-                [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.Service -like "$directoryService" }).directoryServiceUuid
-            }
-        }
-        else {
-            Write-LogMessage -type Verbose -MSG "No directory paramters passed. Gathering all directories, except federated"
-            $dirResult = $(Invoke-RestMethod -Uri "$IdentityURL/Core/GetDirectoryServices" -Method Get -Headers $logonToken -ContentType 'application/json')
-            If ($dirResult.Success -and 0 -ne $dirResult.result.Count) {
-                Write-LogMessage -type Verbose -MSG "Found $($dirResult.result.Count) directories"
-                [string[]]$DirID = $($dirResult.result.Results.Row | Where-Object { $PSItem.Service -notlike 'FDS' }).directoryServiceUuid
-            }
-        } #>
+        $count = (Get-Variable -Name users -Scope 1 -ErrorAction SilentlyContinue).value.Count
+        $currentValue = 0
     }
-
     process {
-        
-        [PSCustomObject[]]$userSearch = @()
-
-        IF (![string]::IsNullOrEmpty($id)) {
-            Write-LogMessage -type Verbose -MSG "User ID provided, adding `"$id`" to user search paramters"
-            $userSearch += [PSCustomObject]@{_ID = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $id; ignoreCase = 'true' } } } 
+        if ($count -ne 0) {
+            $currentValue += 1
+            $percent = ($currentValue / $count) * 100
+            Write-Progress -Activity "Getting detailed user information" -Status "$currentValue out of $count" -PercentComplete $percent
         }
-        
-        IF (![string]::IsNullOrEmpty($Name)) {
-            Write-LogMessage -type Verbose -MSG "User Name provided, adding `"$name`" to user search paramters"
-            $userSearch += [PSCustomObject]@{Name = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $Name; ignoreCase = 'true' } } }
-        }
-        IF (![string]::IsNullOrEmpty($DisplayName)) {
-            Write-LogMessage -type Verbose -MSG "User Display Name provided, adding `"$DisplayName`" to user search paramters"
-            $userSearch += [PSCustomObject]@{DisplayName = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $DisplayName; ignoreCase = 'true' } } } 
-        }
-        IF (![string]::IsNullOrEmpty($mail)) {
-            Write-LogMessage -type Verbose -MSG "User Email provided, adding `"$mail`" to user search paramters"
-            $userSearch += [PSCustomObject]@{Email = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $mail; ignoreCase = 'true' } } } 
-        }
-
-        IF ($AllUsers) {
+        if ($AllUsers) {
             Write-LogMessage -type Warning -MSG 'All Users switch passed, getting all users'
-        }
-        elseif (0 -eq $userSearch.Count) {
-            Write-LogMessage -type ErrorThrow -MSG 'No search paramters found'
-        }
-
-        $user = [PSCustomObject]@{'_or' = $userSearch; ObjectType = 'user' }
-        $userquery = [PSCustomObject]@{
-            'user' = "$($user|ConvertTo-Json -Depth 99 -Compress)" 
-            'Args' = [PSCustomObject]@{
-                'PageNumber' = 1; 
-                'PageSize'   = 100000; 
-                'Limit'      = 100000;
-                'SortBy'     = '';
-                'Caching'    = -1 
-            } 
-        }
-        $userquery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force 
-
-        Try {
-            Write-LogMessage -type Verbose -MSG 'Starting search for user'
-            $result = Invoke-Rest -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $logonToken -ContentType 'application/json' -Body $($userquery | ConvertTo-Json -Depth 99)
-            IF (!$result.Success) {
+            $result = Invoke-Rest -Uri "$IdentityURL/CDirectoryService/GetUsers" -Method POST -Headers $logonToken -ContentType 'application/json'
+            if (!$result.Success) {
                 Write-LogMessage -type Error -MSG $result.Message
-                Return
+                return
             }
             elseif (![string]::IsNullOrEmpty($result.Result.Exceptions.User)) {
                 Write-LogMessage -type Error -MSG $result.Result.Exceptions.User
-                Return
+                return
             }
-            IF (0 -eq $result.Result.User.Results.Count) {
+            if ($result.Result.Results.Count -eq 0) {
                 Write-LogMessage -type Warning -MSG 'No user found'
-                Return
+                return
             }
-            Else {
-                If ($IDOnly) {
-                    Write-LogMessage -type Verbose -MSG 'Returning ID of user' 
-                    Return $result.Result.User.Results.Row.InternalName
+            else {
+                if ($IDOnly) {
+                    Write-LogMessage -type Verbose -MSG 'Returning ID of users'
+                    return $result.Result.Results.Row.UUID
+                }
+                elseif ($IncludeDetails) {
+                    Write-LogMessage -type Verbose -MSG 'Returning detailed information about users'
+                    [PSCustomObject[]]$users = $result.Result.Results.Row | Select-Object -Property UUID
+                    $ReturnedUsers = $users | Get-IdentityUser -DirectoryServiceUuid $DirID
+                    return $ReturnedUsers
                 }
                 else {
-                    Write-LogMessage -type Verbose -MSG 'Returning all informatin about user' 
-                    Return $result.Result.User.Results.Row
+                    Write-LogMessage -type Verbose -MSG 'Returning basic information about users'
+                    [PSCustomObject[]]$users = $result.Result.Results.Row
+                    return $users
                 }
             }
         }
-        Catch {
-            Write-LogMessage -type Error -MSG "Error Code : $($PSitem.Exception.Message)"
-        } 
+        [PSCustomObject[]]$userSearch = @()
+        if (![string]::IsNullOrEmpty($UUID)) {
+            Write-LogMessage -type Verbose -MSG "User UUID provided, adding `"$UUID`" to user search parameters"
+            $userSearch += [PSCustomObject]@{_ID = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $UUID; ignoreCase = 'true' } } }
+        }
+        if (![string]::IsNullOrEmpty($name)) {
+            Write-LogMessage -type Verbose -MSG "User Name provided, adding `"$name`" to user search parameters"
+            $userSearch += [PSCustomObject]@{SystemName = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $name; ignoreCase = 'true' } } }
+        }
+        if (![string]::IsNullOrEmpty($DisplayName)) {
+            Write-LogMessage -type Verbose -MSG "User Display Name provided, adding `"$DisplayName`" to user search parameters"
+            $userSearch += [PSCustomObject]@{DisplayName = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $DisplayName; ignoreCase = 'true' } } }
+        }
+        if (![string]::IsNullOrEmpty($mail)) {
+            Write-LogMessage -type Verbose -MSG "User Email provided, adding `"$mail`" to user search parameters"
+            $userSearch += [PSCustomObject]@{Email = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $mail; ignoreCase = 'true' } } }
+        }
+        if (![string]::IsNullOrEmpty($InternalName)) {
+            Write-LogMessage -type Verbose -MSG "User Internal Name provided, adding `"$InternalName`" to user search parameters"
+            $userSearch += [PSCustomObject]@{InternalName = [PSCustomObject]@{'_like' = [PSCustomObject]@{value = $InternalName; ignoreCase = 'true' } } }
+        }
+        elseif ($userSearch.Count -eq 0) {
+            Write-LogMessage -type ErrorThrow -MSG 'No search parameters found'
+        }
+        $user = $userSearch
+        $userquery = [PSCustomObject]@{
+            'user' = "$($user | ConvertTo-Json -Depth 99 -Compress)"
+        }
+        $userquery | Add-Member -Type NoteProperty -Name 'directoryServices' -Value $DirID -Force
+        try {
+            Write-LogMessage -type Verbose -MSG 'Starting search for user'
+            $result = Invoke-Rest -Uri "$IdentityURL/UserMgmt/DirectoryServiceQuery" -Method POST -Headers $logonToken -ContentType 'application/json' -Body ($userquery | ConvertTo-Json -Depth 99)
+            if (!$result.Success) {
+                Write-LogMessage -type Error -MSG $result.Message
+                return
+            }
+            elseif (![string]::IsNullOrEmpty($result.Result.Exceptions.User)) {
+                Write-LogMessage -type Error -MSG $result.Result.Exceptions.User
+                return
+            }
+            if ($result.Result.User.Results.Count -eq 0) {
+                Write-LogMessage -type Warning -MSG 'No user found'
+                return
+            }
+            else {
+                if ($IDOnly) {
+                    Write-LogMessage -type Verbose -MSG 'Returning ID of user'
+                    return $result.Result.User.Results.Row.InternalName
+                }
+                else {
+                    Write-LogMessage -type Verbose -MSG 'Returning all information about user'
+                    return $result.Result.User.Results.Row
+                }
+            }
+        }
+        catch {
+            Write-LogMessage -type Error -MSG "Error Code : $($_.Exception.Message)"
+        }
+    }
+    end {
+        Write-Progress -Completed
     }
 }

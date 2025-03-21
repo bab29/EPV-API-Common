@@ -10,5 +10,8 @@
     VersionedOutputDirectory = $false
     CopyDirectories = @(
         'en-US'
+        'Classes'
+        'Modules'
+        'Format'
     )
 }
